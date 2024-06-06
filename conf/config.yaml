@@ -1,0 +1,11 @@
+defaults:
+    - task: phoneme_sequencing
+    - _self_
+
+patient_dir: ???
+patients: all
+patient_prefixes:
+    - D*
+    - S*
+merge_thresh: 0.5  # seconds
+debug_mode: False

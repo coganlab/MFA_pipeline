@@ -1,0 +1,19 @@
+name: sentence_repetition
+
+# maximum duration of window to provide to mfa in seconds (reduces duration of end of block response windows)
+max_dur: 10.0 
+
+##### MFA settings #####
+mfa:
+  dict: 'english_us_arpa'
+  acoustic: 'english_us_arpa'
+
+##### Text representing cues #####
+cue_text:
+  hut: hut
+  heat: heat
+  hoot: hoot
+  hot: hot
+  mice: there was once a house that was overrun with mice
+  dog: the dog was very proud of the bell
+  fame: notoriety is often mistaken for fame
