@@ -7,5 +7,9 @@ patients: all
 patient_prefixes:
     - D*
     - S*
+
 merge_thresh: 0.5  # seconds
+
+only_stims: False
+
 debug_mode: False
