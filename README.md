@@ -3,6 +3,8 @@ Pipeline for using the Montreal Forced Aligner (MFA) to automatically annotate s
 
 This code utilizes functionality from the [Montreal Forced Aligner](https://montreal-forced-aligner.readthedocs.io/en/latest/index.html) to automatically mark word and phoneme level timings of patient responses for Cogan Lab speech tasks. See instructions below on how to install and use the pipeline.
 
+**Currently supported tasks: Phoneme Sequencing, Sentence Repetition**
+
 ## Installation
 1. Clone this repository to your preferred location on your computer.
 2. Create a Python environment containing the packages defined in the `environment.yml` ([Anaconda](https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html#creating-an-environment-from-an-environment-yml-file)) and `requirements.txt` ([pip](https://packaging.python.org/en/latest/guides/installing-using-pip-and-virtual-environments/)) files contained in this repository.
