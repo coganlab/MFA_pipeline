@@ -1,5 +1,7 @@
 name: sentence_repetition
 
+stim_dir: 'ECoG_Task_Data\Stim\SentenceRep\SentenceRep_Stim\mfa\stim_annotations'
+
 # maximum duration of window to provide to mfa in seconds (reduces duration of end of block response windows)
 max_dur: 10.0 
 

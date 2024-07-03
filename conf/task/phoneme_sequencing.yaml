@@ -1,5 +1,7 @@
 name: phoneme_sequencing
 
+stim_dir: 'ECoG_Task_Data\Stim\PhonemeSequencing\all_tokens\mfa\stim_annotations'
+
 # maximum duration of window to provide to mfa in seconds (reduces duration of end of block response windows)
 max_dur: 7.0 
 
