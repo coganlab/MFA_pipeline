@@ -25,8 +25,8 @@ def calculateAudDur(wav_path: str) -> float:
     return time
 
 def txt2textGrid(txt_path: str, tg_name: str, tg_dir: Optional[str] = None,
-                 tier_name: str = 'words',
-                 return_tg: bool = False) -> Optional[TextGrid]:
+                 tier_name: str = 'words', return_tg: bool = False) \
+        -> Optional[TextGrid]:
     """Converts a text file with format:
     start_time    end_time    label
     to a TextGrid object and saves it to a .TextGrid file.
@@ -282,8 +282,8 @@ def annotateStims(annot_dict: dict, onset_path: str, out_dir: str = None,
             loadAnnots() function above.
         onset_path (str): Path to the cue onset file for the patient.
         out_dir (str, optional): Directory to save label files to. If None,
-            will use the same directory as in the cue onset path. Defaults to
-            None.
+            will add a directory "mfa" to the directory containing the onsets.
+            Defaults to None.
         out_form (str, optional): Format to save label files in. Defaults to
         "mfa_stim_%s.txt".
     """    
@@ -293,6 +293,10 @@ def annotateStims(annot_dict: dict, onset_path: str, out_dir: str = None,
     # specified
     if out_dir is None:
         out_dir = onset_path.parent / 'mfa'
+
+        # add mfa directory if it doesn't exist
+        if not out_dir.exists():
+            out_dir.mkdir()
 
     # get all of the cue onsets
     with open(onset_path, 'r') as f:
@@ -412,8 +416,12 @@ def loadMatCol(mat_path: str, key: str, col: int) -> np.ndarray:
     """    
     data = sio.loadmat(mat_path)
     data_var = data[key][0,:]
-    data_col = np.array([row[0,0][col][0] if row[0,0][col].shape[0] > 0 else ''
-                         for row in data_var])
+    try:  # trial info mat file saved as cell
+        data_col = np.array([row[0,0][col][0] if row[0,0][col].shape[0] > 0
+                             else '' for row in data_var])
+    except IndexError:  # trial info mat file saved as struct
+        data_col = np.array([row[col][0] if row[col].shape[0] > 0 else ''
+                             for row in data_var])
     return data_col
 
 # if __name__ == '__main__':
