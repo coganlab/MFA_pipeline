@@ -1,4 +1,4 @@
-# Montreal Forced Aligner (MFA) pipeline
+# Montreal Forced Aligner (MFA) Pipeline
 Pipeline for using the Montreal Forced Aligner (MFA) to automatically annotate speech task data.
 
 This code utilizes functionality from the [Montreal Forced Aligner](https://montreal-forced-aligner.readthedocs.io/en/latest/index.html) to automatically mark word and phoneme level timings of patient responses for Cogan Lab speech tasks. See instructions below on how to install and use the pipeline.
