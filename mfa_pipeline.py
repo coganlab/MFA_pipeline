@@ -16,9 +16,11 @@ def main(cfg: DictConfig) -> None:
         raise RuntimeError(f'Missing mandatory key(s):\n{missing_keys}\n '
                            'Please specify them in the command line or config '
                            'file.')
-    
-    if cfg.task.name not in ['phoneme_sequencing', 'sentence_repetition']:
-        raise NotImplementedError(f'Task {cfg.task.name} not implemented')
+
+    # looks like hydra already handles this by searching conf/task
+    # if cfg.task.name not in cfg.impl_tasks:
+    #     raise NotImplementedError(f'Task {cfg.task.name} not implemented. '
+    #                               f'Please choose from: {cfg.impl_tasks}')
     
     if cfg.patients == 'all':
         print('========== Running MFA on all patients in directory ==========')
@@ -31,31 +33,42 @@ def main(cfg: DictConfig) -> None:
         print('=========== Running MFA on selected patients ===========')
         patients = cfg.patients.split(',')
 
+    if cfg.debug_mode:
+        print('##### RUNNING IN DEBUG MODE #####')
+
+    # Load stimulus annotations for the task
+    HOME = os.path.expanduser("~")
+    LAB_root = os.path.join(HOME, "Box", "CoganLab")
+    annot_dir = Path(os.path.join(LAB_root, cfg.task.stim_dir))
+    annot_dict = mfa_utils.loadAnnotsToDict(annot_dir)
+
     start = time.time()
     err_pts = []
-    for pt in tqdm(patients, desc='Running MFA', ascii=False, ncols=1000,
+    for pt in tqdm(patients, desc='Running MFA', ascii=False, ncols=150,
                    bar_format='{l_bar}{bar}{r_bar}'):
         pt_path = Path(cfg.patient_dir) / pt
         mfa_path = pt_path / 'mfa'
+        onset_path = Path(pt_path) / 'cue_events.txt'
         
         ### for large-scale patient runs, where you want the script to continue
         ### to the next patient if an error occurs
         if not cfg.debug_mode:
             try:
-                try:
-                    # load merge stim annotations together for different words
-                    # in same stim
-                    mfa_utils.mergeAnnots(mfa_path / 'mfa_stim_words.txt',
-                                          cfg.merge_thresh, merge_path=pt_path /
-                                          'merged_stim_times.txt')
-                except FileNotFoundError:
-                    print(f'Stimulus annotations not found for {pt}. Please '
-                          'use the annotate_stims.py script to create them or '
-                          'the a previous version of the mfa pipeline that '
-                          'does not rely on stimulus annotations '
-                          '(less accurate).')
-                    err_pts.append(pt)
+
+                # annotate stimuli for the current patient
+                mfa_utils.annotateStims(annot_dict, onset_path,
+                                        out_form='mfa_stim_%s.txt')
+                if cfg.only_stims:
                     continue
+
+                # merge stimuli annotations together so that separate
+                # intrastimulus words are represented as the same stimulus
+                mfa_utils.mergeAnnots(
+                    mfa_path / 'mfa_stim_words.txt',
+                    cfg.merge_thresh,
+                    merge_path=pt_path / 'merged_stim_times.txt'
+                )
+
 
                 # create text grid annotation for responses
                 recording_dur = mfa_utils.calculateAudDur(pt_path /
@@ -74,7 +87,7 @@ def main(cfg: DictConfig) -> None:
                 err_pts.append(pt)
                 continue
 
-                # run mfa
+            # run mfa
             mfa_ran = mfa_utils.runMFA(mfa_path / 'input_mfa', mfa_path /
                                        'output_mfa', mfa_dict=cfg.task.mfa.dict,
                                        mfa_model=cfg.task.mfa.acoustic)
@@ -95,7 +108,10 @@ def main(cfg: DictConfig) -> None:
                 continue
         #### for investigating errors ####
         else:
-            print('##### RUNNING IN DEBUG MODE #####')
+            mfa_utils.annotateStims(annot_dict, onset_path,
+                                    out_form='mfa_stim_%s.txt')
+            if cfg.only_stims:
+                continue
             mfa_utils.mergeAnnots(mfa_path / 'mfa_stim_words.txt',
                                   cfg.merge_thresh, merge_path=pt_path /
                                   'merged_stim_times.txt')
