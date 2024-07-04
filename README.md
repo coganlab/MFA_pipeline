@@ -7,7 +7,7 @@ This code utilizes functionality from the [Montreal Forced Aligner](https://mont
 
 ## Installation
 1. Clone this repository to your preferred location on your computer.
-2. Create a Python environment containing the packages defined in the `environment.yml` ([Anaconda](https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html#creating-an-environment-from-an-environment-yml-file)) and `requirements.txt` ([pip](https://packaging.python.org/en/latest/guides/installing-using-pip-and-virtual-environments/)) files contained in this repository.
+2. Create a Python environment containing the packages defined in the `environment.yml` ([Anaconda](https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html#creating-an-environment-from-an-environment-yml-file)) or `requirements.txt` ([pip](https://packaging.python.org/en/latest/guides/installing-using-pip-and-virtual-environments/)) files contained in this repository.
 
 ## Usage
 This pipeline assumes you have a directory of patients' speech task data with the following file structure:
