@@ -10,7 +10,7 @@ This code utilizes functionality from the [Montreal Forced Aligner](https://mont
 2. Create a Python environment containing the packages defined in the `environment.yml` ([Anaconda](https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html#creating-an-environment-from-an-environment-yml-file)) or `requirements.txt` ([pip](https://packaging.python.org/en/latest/guides/installing-using-pip-and-virtual-environments/)) files contained in this repository.
 
 ## Usage
-This pipeline assumes you have a directory of patients' speech task data with the following file structure:
+This pipeline assumes you have a directory of patients' speech task data with the following file structure (other files may be present, but these files are required):
 ```
 <path_to_patients>/
     patient1/
