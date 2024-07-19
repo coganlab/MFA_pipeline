@@ -59,8 +59,7 @@ def main(cfg: DictConfig) -> None:
 
         print('##### Annotating stimuli for patient %s #####' % pt)
         stims_ran, err_msg = run_stims(annot_dict, onset_path, mfa_path,
-                                       pt_path, cfg.merge_thresh,
-                                       cfg.debug_mode)
+                                       cfg.merge_thresh, cfg.debug_mode)
         if not stims_ran:
             err_pts.append(pt)
             print(err_msg % pt)
@@ -87,7 +86,7 @@ def main(cfg: DictConfig) -> None:
           'seconds')
 
 
-def run_stims(annot_dict, onset_path, mfa_path, pt_path, merge_thresh, debug):
+def run_stims(annot_dict, onset_path, mfa_path, merge_thresh, debug):
     if not debug:
         try:
             # annotate stimuli for the current patient
@@ -150,8 +149,7 @@ def run_resp(pt_path, mfa_path, resp_type, max_dur, mfa_dict, mfa_acoustic, debu
         try:
             # convert mfa output to txt file
             mfa_utils.textGrid2txt(mfa_path / out_mfa_name /
-                                   tg_out, 'mfa_{resp_type}',
-                                   txt_dir=mfa_path)
+                                   tg_out, label_name, txt_dir=mfa_path)
         except Exception as e:
             err_msg = f'Error extracting annotations for patient %s: {e}'
             return False, err_msg
