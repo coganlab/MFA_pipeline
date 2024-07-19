@@ -1,6 +1,6 @@
 name: phoneme_sequencing
 
-stim_dir: 'ECoG_Task_Data\Stim\PhonemeSequencing\all_tokens\mfa\stim_annotations'
+stim_dir: 'Box\CoganLab\ECoG_Task_Data\Stim\PhonemeSequencing\all_tokens\mfa\stim_annotations'
 
 # maximum duration of window to provide to mfa in seconds (reduces duration of end of block response windows)
 max_dur: 7.0 
@@ -9,58 +9,3 @@ max_dur: 7.0
 mfa:
   dict: 'english_us_ps'
   acoustic: 'english_us_arpa'
-
-##### Text representing cues #####
-cue_text:
-  abae: abae
-  abi: abi
-  aeba: aeba
-  aebi: aebi
-  aebu: aebu
-  aega: aega
-  aeka: aeka
-  aepi: aepi
-  aka: aka
-  aku: aku
-  ava: ava
-  avae: avae
-  bab: bab
-  baek: baek
-  bak: bak
-  bup: bup
-  gab: gab
-  gaeb: gaeb
-  gaev: gaev
-  gak: gak
-  gav: gav
-  gig: gig
-  gip: gip
-  gub: gub
-  ibu: ibu
-  ika: ika
-  ikae: ikae
-  ipu: ipu
-  iva: iva
-  ivu: ivu
-  kab: kab
-  kaeg: kaeg
-  kub: kub
-  kug: kug
-  paek: paek
-  paep: paep
-  paev: paev
-  puk: puk
-  pup: pup
-  uba: uba
-  uga: uga
-  ugae: ugae
-  ukae: ukae
-  upi: upi
-  upu: upu
-  uvae: uvae
-  uvi: uvi
-  vaeg: vaeg
-  vaek: vaek
-  vip: vip
-  vug: vug
-  vuk: vuk

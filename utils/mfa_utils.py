@@ -52,7 +52,7 @@ def txt2textGrid(txt_path: str, tg_name: str, tg_dir: Optional[str] = None,
         tg_dir = Path(txt_path).parent
         # tg_path = os.path.join(os.path.dirname(txt_path), tg_name +
         #                        '.TextGrid')
-    tg_path = tg_dir / (tg_name + '.TextGrid')
+    tg_path = tg_dir / tg_name
 
     # Load your text file
     entries = []
@@ -130,7 +130,12 @@ def textGrid2txt(tg_path: str, txt_name: str, txt_dir: Optional[str] = None,
                     f.write(f'{start}\t{end}\t{label}\n')
 
 
-def prepareForMFA(base_dir: str, wav_path: str = None, tg_path: str = None) -> None:
+def prepareForMFA(base_dir: str, wav_path: Optional[str] = None,
+                  tg_path: Optional[str] = None,
+                  wav_name_out: Optional[str] = None,
+                  tg_name_out: Optional[str] = None,
+                  input_dir_name: str = 'input_mfa',
+                  output_dir_name: str = 'output_mfa') -> None:
     """Prepare files for Montreal Forced Aligner (MFA) by moving audio and
     transcript files to a newly created MFA input directory. An output
     directory is also created to store MFA output files.
@@ -145,6 +150,12 @@ def prepareForMFA(base_dir: str, wav_path: str = None, tg_path: str = None) -> N
         tg_path (str, optional): Path to the transcript file being used for the
             MFA. If unspecified, the function assumes the audio file is titled
             'allblocks.TextGrid' and is located in the base directory.
+            Defaults to None.
+        wav_name_out (str, optional): Name for the audio file in the MFA input
+            directory. Gives the option to rename the audio file.
+            Defaults toNone.
+        tg_name_out (str, optional): Name for the transcript file in the MFA
+            input directory. Gives the option to rename the transcript file.
             Defaults to None.
     """    
     base_path = Path(base_dir)
@@ -162,20 +173,20 @@ def prepareForMFA(base_dir: str, wav_path: str = None, tg_path: str = None) -> N
         tg_path = Path(tg_path)
 
     # MFA input and output folders to run from command line
-    input_mfa_dir = base_path / 'input_mfa'
-    output_mfa_dir = base_path / 'output_mfa'
+    input_mfa_dir = base_path / input_dir_name
+    output_mfa_dir = base_path / output_dir_name
     os.makedirs(input_mfa_dir, exist_ok=True)
     os.makedirs(output_mfa_dir, exist_ok=True)
 
     # move wav (audio) and TextGrid (transcript) to input directory
-    wav_name = wav_path.name
-    tg_name = tg_path.name
+    wav_name = wav_path.name if wav_name_out is None else wav_name_out
+    tg_name = tg_path.name if tg_name_out is None else tg_name_out
     shutil.copy(wav_path, input_mfa_dir / wav_name)
     shutil.copy(tg_path, input_mfa_dir / tg_name)
 
 
 def loadAnnotsToDict(annot_dir: str, tier_name: Union[str, list[str]] =
-               ['words', 'phones']) -> dict:
+                     ['words', 'phones']) -> dict:
     """Load text annotation files with the format:
     start_time    end_time    label
     from the specified directory to a dictionary. Only text files
@@ -329,17 +340,21 @@ def annotateStims(annot_dict: dict, onset_path: str, out_dir: str = None,
                             f'{token}\n')
                     
 
-def annotateResp(base_dir: str, recording_length: float, output_dir: str,
-                 max_dur: float, time_fname: str = 'merged_stim_times.txt',
+def annotateResp(time_path: str, trial_info_path: str, recording_length: float,
+                 output_dir: str, max_dur: float, method: str = 'resp',
+                 time_fname: str = 'merged_stim_times.txt',
                  trials_fname: str = 'trialInfo.mat', output_fname: str = 
                  'annotated_resp_windows.txt') -> None:
     # load stimulus timing information and trial info information
-    time_path = base_dir / time_fname
-    trial_info_path = base_dir / trials_fname
+    # time_path = base_dir / time_fname
+    # trial_info_path = base_dir / trials_fname
 
     # covnert stim times to list of format [start, end, stim]
     stim_times = open(time_path, 'r').readlines()
     stim_times = [line.strip().split('\t') for line in stim_times]
+
+    # extract cue type condtions from trial info
+    cue_cnds = loadMatCol(trial_info_path, 'trialInfo', 0)
 
     # extract go conditions from trial info
     go_cnds = loadMatCol(trial_info_path, 'trialInfo', 2)
@@ -348,17 +363,21 @@ def annotateResp(base_dir: str, recording_length: float, output_dir: str,
     with open(out_path, 'w') as f:
         for i in range(len(stim_times)):
             # check that response is expected by task conditions
-            if go_cnds[i] != 'Speak':
-                continue
+            if method == 'resp':
+                if go_cnds[i] != 'Speak' or cue_cnds[i] != 'Repeat':
+                    continue
+                _, stim_e1, stim = stim_times[i]
+            elif method in ['yes', 'no']:
+                if go_cnds[i] != 'Speak' or cue_cnds[i] != 'Yes/No':
+                    continue
+                _, stim_e1, _ = stim_times[i]
+                stim = method
 
-            _, stim_e1, stim = stim_times[i]
+            # if cue_cnds[i] == 'Yes/No':
+            #     # replace text with yes or no instead of stimulus content
+            #     stim = 'yes no'
 
             if i == len(stim_times) - 1:
-                # # since we dont have a following stimulus, define the window
-                # # as the end --- this doesn't work if we don't have any repeats
-                # # of that stim and it happens to be longer than all of the others
-                # stim_s2 = stim_e1 + max_diff
-
                 # last response window is from the end of the last stimulus to
                 # the end of the recording
                 stim_s2 = recording_length  # in seconds

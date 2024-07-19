@@ -30,17 +30,24 @@ def main(cfg: DictConfig) -> None:
             patients += glob.glob(os.path.join(cfg.patient_dir, prefix))
         patients = [os.path.basename(patient) for patient in patients]
     else:
-        print('=========== Running MFA on selected patients ===========')
         patients = cfg.patients.split(',')
+        print(f'========== Running MFA on seletected patients: {patients} ==========')
+
 
     if cfg.debug_mode:
         print('##### RUNNING IN DEBUG MODE #####')
 
     # Load stimulus annotations for the task
     HOME = os.path.expanduser("~")
-    LAB_root = os.path.join(HOME, "Box", "CoganLab")
-    annot_dir = Path(os.path.join(LAB_root, cfg.task.stim_dir))
+    # LAB_root = os.path.join(HOME, "Box", "CoganLab"
+    annot_dir = Path(os.path.join(HOME, cfg.task.stim_dir))
     annot_dict = mfa_utils.loadAnnotsToDict(annot_dir)
+
+    run_type = ['resp']
+    if cfg.task.name == 'lexical_repeat':
+        if cfg.task.mark_yes_no:
+            run_type.append('yes')
+            run_type.append('no')
 
     start = time.time()
     err_pts = []
@@ -49,93 +56,128 @@ def main(cfg: DictConfig) -> None:
         pt_path = Path(cfg.patient_dir) / pt
         mfa_path = pt_path / 'mfa'
         onset_path = Path(pt_path) / 'cue_events.txt'
-        
-        ### for large-scale patient runs, where you want the script to continue
-        ### to the next patient if an error occurs
-        if not cfg.debug_mode:
-            try:
 
-                # annotate stimuli for the current patient
-                mfa_utils.annotateStims(annot_dict, onset_path,
-                                        out_form='mfa_stim_%s.txt')
-                if cfg.only_stims:
-                    continue
+        print('##### Annotating stimuli for patient %s #####' % pt)
+        stims_ran, err_msg = run_stims(annot_dict, onset_path, mfa_path,
+                                       pt_path, cfg.merge_thresh,
+                                       cfg.debug_mode)
+        if not stims_ran:
+            err_pts.append(pt)
+            print(err_msg % pt)
+            continue
 
-                # merge stimuli annotations together so that separate
-                # intrastimulus words are represented as the same stimulus
-                mfa_utils.mergeAnnots(
-                    mfa_path / 'mfa_stim_words.txt',
-                    cfg.merge_thresh,
-                    merge_path=pt_path / 'merged_stim_times.txt'
-                )
+        if cfg.only_stims:
+            continue
 
-
-                # create text grid annotation for responses
-                recording_dur = mfa_utils.calculateAudDur(pt_path /
-                                                          'allblocks.wav')
-                mfa_utils.annotateResp(pt_path, recording_dur, mfa_path,
-                                       cfg.task.max_dur)
-                mfa_utils.txt2textGrid(mfa_path / 'annotated_resp_windows.txt',
-                                       'allblocks', tg_dir=pt_path)
-                mfa_utils.prepareForMFA(mfa_path, wav_path=pt_path /
-                                        'allblocks.wav', tg_path=pt_path /
-                                        'allblocks.TextGrid')
-
-            except Exception as e:
-                print(f'********** Error preparing patient {pt} for MFA: '
-                      f'**********\n{e}')
+        for t in run_type:
+            t_msg = 'Response' if t == 'resp' else 'Yes/No'
+            print(f'##### Preparing patient {pt} for MFA: {t_msg} #####')
+            resp_ran, err_msg = run_resp(pt_path, mfa_path, t, cfg.task.max_dur,
+                                         cfg.task.mfa.dict, cfg.task.mfa.acoustic,
+                                         cfg.debug_mode)
+            if not resp_ran:
                 err_pts.append(pt)
+                print(err_msg % pt)
                 continue
-
-            # run mfa
-            mfa_ran = mfa_utils.runMFA(mfa_path / 'input_mfa', mfa_path /
-                                       'output_mfa', mfa_dict=cfg.task.mfa.dict,
-                                       mfa_model=cfg.task.mfa.acoustic)
-            if not mfa_ran:
-                print(f'********** Error running MFA on patient {pt} ***'
-                      '*******')
-                err_pts.append(pt)
-                continue
-            try:
-                # convert mfa output to txt file
-                mfa_utils.textGrid2txt(mfa_path / 'output_mfa' /
-                                       'allblocks.TextGrid', 'mfa_resp',
-                                       txt_dir=mfa_path)
-            except Exception as e:
-                print('********** Error extracting annotations for patient '
-                      f'{pt}: **********\n{e} ')
-                err_pts.append(pt)
-                continue
-        #### for investigating errors ####
-        else:
-            mfa_utils.annotateStims(annot_dict, onset_path,
-                                    out_form='mfa_stim_%s.txt')
-            if cfg.only_stims:
-                continue
-            mfa_utils.mergeAnnots(mfa_path / 'mfa_stim_words.txt',
-                                  cfg.merge_thresh, merge_path=pt_path /
-                                  'merged_stim_times.txt')
-            recording_dur = mfa_utils.calculateAudDur(pt_path /
-                                                      'allblocks.wav')
-            mfa_utils.annotateResp(pt_path, recording_dur, mfa_path,
-                                   cfg.task.max_dur)
-            mfa_utils.txt2textGrid(mfa_path / 'annotated_resp_windows.txt',
-                                   'allblocks', tg_dir=pt_path)
-            mfa_utils.prepareForMFA(mfa_path, wav_path=pt_path /
-                                    'allblocks.wav', tg_path=pt_path /
-                                    'allblocks.TextGrid')
-            mfa_utils.runMFA(mfa_path / 'input_mfa', mfa_path /
-                             'output_mfa')
-            mfa_utils.textGrid2txt(mfa_path / 'output_mfa' /
-                                   'allblocks.TextGrid', 'mfa_resp',
-                                   txt_dir=mfa_path)
 
     end = time.time()
     if len(err_pts) > 0:
         print(f'Errors occurred for the following patients: \n{err_pts}')
     print(f'Finished processing {len(patients)} patients in {end-start} '
           'seconds')
-            
+
+
+def run_stims(annot_dict, onset_path, mfa_path, pt_path, merge_thresh, debug):
+    if not debug:
+        try:
+            # annotate stimuli for the current patient
+            mfa_utils.annotateStims(annot_dict, onset_path,
+                                    out_form='mfa_stim_%s.txt')
+
+            # merge stimuli annotations together so that separate
+            # intrastimulus words are represented as the same stimulus
+            mfa_utils.mergeAnnots(
+                mfa_path / 'mfa_stim_words.txt',
+                merge_thresh,
+                merge_path=mfa_path / 'merged_stim_times.txt'
+            )
+        except Exception as e:
+            err_msg = f'Error annotating stimuli for patient %s: {e}'
+            return False, err_msg
+    else:
+        mfa_utils.annotateStims(annot_dict, onset_path,
+                                out_form='mfa_stim_%s.txt')
+        mfa_utils.mergeAnnots(mfa_path / 'mfa_stim_words.txt',
+                              merge_thresh, merge_path=mfa_path /
+                              'merged_stim_times.txt')
+    return True, None
+
+def run_resp(pt_path, mfa_path, resp_type, max_dur, mfa_dict, mfa_acoustic, debug):
+    annot_name = f'annotated_{resp_type}_windows.txt'
+    wav_name_out = f'allblocks_{resp_type}.wav' if resp_type in ['yes', 'no'] else 'allblocks.wav'
+    tg_out = f'allblocks_{resp_type}.TextGrid' if resp_type in ['yes', 'no'] else 'allblocks.TextGrid'
+    inp_mfa_name = f'input_mfa_{resp_type}' if resp_type in ['yes', 'no'] else 'input_mfa'
+    out_mfa_name = f'output_mfa_{resp_type}' if resp_type in ['yes', 'no'] else 'output_mfa'
+    label_name = f'mfa_{resp_type}'
+    if not debug:
+        try:
+            # create text grid annotation for responses
+            recording_dur = mfa_utils.calculateAudDur(pt_path / 'allblocks.wav')
+            mfa_utils.annotateResp(mfa_path / 'merged_stim_times.txt.',
+                                   pt_path / 'trialInfo.mat',
+                                   recording_dur, mfa_path,
+                                   max_dur, method=resp_type,
+                                   output_fname=annot_name)
+            mfa_utils.txt2textGrid(mfa_path / annot_name, tg_out,
+                                   tg_dir=mfa_path)
+            mfa_utils.prepareForMFA(mfa_path, wav_path=pt_path / 'allblocks.wav',
+                                    tg_path=mfa_path / tg_out,
+                                    wav_name_out=wav_name_out,
+                                    input_dir_name=inp_mfa_name,
+                                    output_dir_name=out_mfa_name)
+
+        except Exception as e:
+            err_msg = f'Error preparing patient %s for MFA: {e}'
+            return False, err_msg
+
+        # run mfa
+        mfa_ran = mfa_utils.runMFA(mfa_path / inp_mfa_name, mfa_path /
+                                   out_mfa_name, mfa_dict=mfa_dict,
+                                   mfa_model=mfa_acoustic)
+        if not mfa_ran:
+            err_msg = f'Error running MFA on patient %s'
+            return False, err_msg
+        try:
+            # convert mfa output to txt file
+            mfa_utils.textGrid2txt(mfa_path / out_mfa_name /
+                                   tg_out, 'mfa_{resp_type}',
+                                   txt_dir=mfa_path)
+        except Exception as e:
+            err_msg = f'Error extracting annotations for patient %s: {e}'
+            return False, err_msg
+
+    else:
+        # create text grid annotation for responses
+        recording_dur = mfa_utils.calculateAudDur(pt_path / 'allblocks.wav')
+        mfa_utils.annotateResp(mfa_path / 'merged_stim_times.txt.',
+                               pt_path / 'trialInfo.mat',
+                               recording_dur, mfa_path,
+                               max_dur, method=resp_type,
+                               output_fname=annot_name)
+        mfa_utils.txt2textGrid(mfa_path / annot_name, tg_out,
+                               tg_dir=mfa_path)
+        mfa_utils.prepareForMFA(mfa_path, wav_path=pt_path / 'allblocks.wav',
+                                tg_path=mfa_path / tg_out,
+                                wav_name_out=wav_name_out,
+                                input_dir_name=inp_mfa_name,
+                                output_dir_name=out_mfa_name)
+        _ = mfa_utils.runMFA(mfa_path / inp_mfa_name, mfa_path /
+                             out_mfa_name, mfa_dict=mfa_dict,
+                             mfa_model=mfa_acoustic)
+        # convert mfa output to txt file
+        mfa_utils.textGrid2txt(mfa_path / out_mfa_name / tg_out, label_name,
+                               txt_dir=mfa_path)
+    return True, None
 
 if __name__ == '__main__':
     main()

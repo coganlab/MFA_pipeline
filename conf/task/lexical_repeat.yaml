@@ -1,0 +1,14 @@
+name: lexical_repeat
+
+stim_dir: 'Box\CoganLab\ECoG_Task_Data\Stim\Lexical\mfa\stim_annotations'
+
+# maximum duration of window to provide to mfa in seconds (reduces duration of end of block response windows)
+max_dur: 7.0
+
+# whether to annotate yes/no responses in lexical task
+mark_yes_no: True
+
+##### MFA settings #####
+mfa:
+  dict: 'english_us_lr'
+  acoustic: 'english_us_arpa'
