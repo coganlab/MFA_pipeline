@@ -69,8 +69,8 @@ def main(cfg: DictConfig) -> None:
             continue
 
         for t in run_type:
-            t_msg = 'Response' if t == 'resp' else 'Yes/No'
-            print(f'##### Preparing patient {pt} for MFA: {t_msg} #####')
+            t_msg = 'Response' if t == 'resp' else 'Yes & No'
+            print(f'##### Preparing patient {pt} for MFA: {t_msg} Annotation #####')
             resp_ran, err_msg = run_resp(pt_path, mfa_path, t, cfg.task.max_dur,
                                          cfg.task.mfa.dict, cfg.task.mfa.acoustic,
                                          cfg.debug_mode)
