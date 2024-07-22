@@ -364,7 +364,7 @@ def annotateResp(time_path: str, trial_info_path: str, recording_length: float,
         for i in range(len(stim_times)):
             # check that response is expected by task conditions
             if method == 'resp':
-                if go_cnds[i] != 'Speak' or cue_cnds[i] != 'Repeat':
+                if go_cnds[i] != 'Speak' or cue_cnds[i] not in ['Repeat', 'Listen']:
                     continue
                 _, stim_e1, stim = stim_times[i]
             elif method in ['yes', 'no']:
