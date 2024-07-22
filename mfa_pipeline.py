@@ -34,6 +34,8 @@ def main(cfg: DictConfig) -> None:
         print(f'========== Running MFA on seletected patients: {patients} ==========')
 
 
+    print(f'##### Running MFA for task: {cfg.task.name} #####')
+
     if cfg.debug_mode:
         print('##### RUNNING IN DEBUG MODE #####')
 
