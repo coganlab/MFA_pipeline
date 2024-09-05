@@ -3,7 +3,7 @@ Pipeline for using the Montreal Forced Aligner (MFA) to automatically annotate s
 
 This code utilizes functionality from the [Montreal Forced Aligner](https://montreal-forced-aligner.readthedocs.io/en/latest/index.html) to automatically mark word and phoneme level timings of patient responses for Cogan Lab speech tasks. See instructions below on how to install and use the pipeline.
 
-**Currently supported tasks: Phoneme Sequencing, Sentence Repetition**
+**Currently supported tasks: Phoneme Sequencing, Sentence Repetition, Lexical Repeat**
 
 ## Installation
 1. Clone this repository to your preferred location on your computer.
@@ -64,12 +64,14 @@ Parameters will be set to their default values as described above and in the `co
 python mfa_pipeline.py patient_dir=<path_to_patients> task=sentence_repetition patients=D101 only_stims=True debug_mode=True
 ```
 
-Within each patient's directory, outputs from this pipeline will be contained in a new 'mfa' directory. Relevant outputs include:
+Within each patient's directory, outputs from this pipeline will be contained in a new `mfa` directory. Relevant outputs include:
 - `mfa_stim_words.txt`: Word-level timings of task stimuli.
 - `mfa_stim_phones.txt`: Phoneme-level timings of task stimuli.
 - `mfa_resp_words.txt`: Word-level timings of patient responses.
 - `mfa_resp_phones.txt`: Phoneme-level timings of patient responses.
 - `annotated_resp_windows.txt`: Windows of patient responses that are input to the MFA. This can be used for debugging if the MFA-annotated responses are not as expected to make sure that the MFA is receiving the correct windows to annotate.
+
+*For lexical delay patients, additional tiers will be included for patients' "yes" and "no" responses. Since these trials can have variable responses ("yes" or "no" for each trial), one MFA instance generates a transcript by assuming the answer is always yes (outputs to the label files `mfa_yes_(words/phones).txt`) and another assumes the answer is always no (`mfa_no_(words/phones).txt`). As above, windows fed into the MFA are available in `annotated_(yes/no)_windows.txt`. Upon manual review of the MFA labels (see below), the incorrect assumed responses can be deleted (**right-click and choose "Delete Label" in Audacity. Pressing "Del" on the highlighted label will remove that SECTION OF TIME, causing all following annotations to be SHIFTED OUT OF ALIGNMENT**).
 
 `input_mfa/` and `output_mfa/` directories will also be created in the patient's directory. These directories contain the input files for running the MFA and the unprocessed MFA outputs. These are only handled by the pipeline and should not be necessary for use.
 
