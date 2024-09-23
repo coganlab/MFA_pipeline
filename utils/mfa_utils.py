@@ -283,7 +283,8 @@ def mergeAnnots(annot_path: str, merge_thresh: float,
             f.write('\t'.join(stim) + '\n')
 
 
-def annotateStims(annot_dict: dict, onset_path: str, out_dir: str = None,
+def annotateStims(annot_dict: dict, onset_path: str, trial_info_path: str,
+                  task_name: str, out_dir: str = None,
                   out_form: str = "mfa_stim_%s.txt") -> None:
     """Places stim annotation templates in a patient's label file at locations
     defined by the provdied cue consets.
@@ -292,6 +293,8 @@ def annotateStims(annot_dict: dict, onset_path: str, out_dir: str = None,
         annot_dict (dict): Stim annotation templates. See format in
             loadAnnots() function above.
         onset_path (str): Path to the cue onset file for the patient.
+        trial_info_path (str): Path to the trial info file for the patient.
+        task_name (str): Name of the task being run.
         out_dir (str, optional): Directory to save label files to. If None,
             will add a directory "mfa" to the directory containing the onsets.
             Defaults to None.
@@ -315,6 +318,12 @@ def annotateStims(annot_dict: dict, onset_path: str, out_dir: str = None,
         # separate onsets into start time, end time, and stimulus
         onsets = [line.strip().split('\t') for line in onsets]
 
+    # get the stimulus modality type (only relevant for picture naming task)
+    if task_name == 'picture_naming':
+        mod_cnds = loadMatCol(trial_info_path, 'trialInfo', 8)
+    else:
+        mod_cnds = ['sound'] * len(onsets)
+
     # iterate through each annotation tier
     tier_names = list(annot_dict.keys())
     
@@ -325,19 +334,24 @@ def annotateStims(annot_dict: dict, onset_path: str, out_dir: str = None,
         except TypeError:
             fname = out_dir / (out_form.split('.')[0] + tier + '.txt')
         with open(fname, 'w') as f:
-            for (cue_start, _, stim) in onsets:
+            for i, (cue_start, cue_stop, stim) in enumerate(onsets):
                 # stim = stim.split('_')[1]
                 stim = stim.split('_')[1].split('.')[0]
-                try:
-                    curr_annots = annot_dict[tier][stim]
-                except KeyError:
-                    print(f'No annotations found for {stim} in tier {tier}.')
-                    continue
-                # write all tokens corresponding to the current stimulus
-                for (annot_start, annot_stop, token) in curr_annots:
-                    f.write(f'{float(cue_start) + float(annot_start)}\t'
-                            f'{float(cue_start) + float(annot_stop)}\t'
-                            f'{token}\n')
+                # use sound annotations for auditory stimuli
+                if mod_cnds[i] == 'sound':
+                    try:
+                        curr_annots = annot_dict[tier][stim]
+                    except KeyError:
+                        print(f'No annotations found for {stim} in tier {tier}.')
+                        continue
+                    # write all tokens corresponding to the current stimulus
+                    for (annot_start, annot_stop, token) in curr_annots:
+                        f.write(f'{float(cue_start) + float(annot_start)}\t'
+                                f'{float(cue_start) + float(annot_stop)}\t'
+                                f'{token}\n')
+                # use cue annotations otherwise
+                else:
+                    f.write(f'{cue_start}\t{cue_stop}\t{stim}\n')
                     
 
 def annotateResp(time_path: str, trial_info_path: str, recording_length: float,
