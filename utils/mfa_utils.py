@@ -341,10 +341,9 @@ def annotateStims(annot_dict: dict, onset_path: str, out_dir: str = None,
                     
 
 def annotateResp(time_path: str, trial_info_path: str, recording_length: float,
-                 output_dir: str, max_dur: float, method: str = 'resp',
-                 time_fname: str = 'merged_stim_times.txt',
-                 trials_fname: str = 'trialInfo.mat', output_fname: str = 
-                 'annotated_resp_windows.txt') -> None:
+                 output_dir: str, max_dur: float, task_name: str,
+                 method: str = 'resp',
+                 output_fname: str = 'annotated_resp_windows.txt') -> None:
     # load stimulus timing information and trial info information
     # time_path = base_dir / time_fname
     # trial_info_path = base_dir / trials_fname
@@ -357,14 +356,17 @@ def annotateResp(time_path: str, trial_info_path: str, recording_length: float,
     cue_cnds = loadMatCol(trial_info_path, 'trialInfo', 0)
 
     # extract go conditions from trial info
-    go_cnds = loadMatCol(trial_info_path, 'trialInfo', 2)
+    if task_name == 'picture_naming':
+        go_cnds = ['Speak'] * len(cue_cnds)
+    else:
+        go_cnds = loadMatCol(trial_info_path, 'trialInfo', 2)
 
     out_path = output_dir / output_fname
     with open(out_path, 'w') as f:
         for i in range(len(stim_times)):
             # check that response is expected by task conditions
             if method == 'resp':
-                if go_cnds[i] != 'Speak' or cue_cnds[i] not in ['Repeat', 'Listen']:
+                if go_cnds[i] != 'Speak' or cue_cnds[i] not in ['Repeat', 'Listen', 'ListenSpeak']:
                     continue
                 _, stim_e1, stim = stim_times[i]
             elif method in ['yes', 'no']:
