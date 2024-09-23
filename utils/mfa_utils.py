@@ -358,6 +358,24 @@ def annotateResp(time_path: str, trial_info_path: str, recording_length: float,
                  output_dir: str, max_dur: float, task_name: str,
                  method: str = 'resp',
                  output_fname: str = 'annotated_resp_windows.txt') -> None:
+    """Create response windows for a patient's recording based on the provided
+    stimulus timing information and trial info.
+
+    Args:
+        time_path (str): Path to the stimulus timing file.
+        trial_info_path (str): Path to the trial info file.
+        recording_length (float): Length of the recording in seconds.
+        output_dir (str): Directory to save the response windows to.
+        max_dur (float): Maximum duration of a response window in seconds.
+        task_name (str): Name of the task being run.
+        method (str, optional): Method to use for response windows. 'resp' will
+            create response windows based on the stimulus content. 'yes' or
+            'no' will create response windows assuming the patient is only
+            responding with 'yes' or 'no' (for yes/no tasks). Defaults to
+            'resp'.
+        output_fname (str, optional): Name of the output file containing the
+            response windows. Defaults to 'annotated_resp_windows.txt'.
+    """
     # load stimulus timing information and trial info information
     # time_path = base_dir / time_fname
     # trial_info_path = base_dir / trials_fname
@@ -371,6 +389,8 @@ def annotateResp(time_path: str, trial_info_path: str, recording_length: float,
 
     # extract go conditions from trial info
     if task_name == 'picture_naming':
+        # go cnds not defined in trial info for picture naming task, for
+        # compatibility with other tasks
         go_cnds = ['Speak'] * len(cue_cnds)
     else:
         go_cnds = loadMatCol(trial_info_path, 'trialInfo', 2)
@@ -388,10 +408,6 @@ def annotateResp(time_path: str, trial_info_path: str, recording_length: float,
                     continue
                 _, stim_e1, _ = stim_times[i]
                 stim = method
-
-            # if cue_cnds[i] == 'Yes/No':
-            #     # replace text with yes or no instead of stimulus content
-            #     stim = 'yes no'
 
             if i == len(stim_times) - 1:
                 # last response window is from the end of the last stimulus to
