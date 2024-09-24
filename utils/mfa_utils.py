@@ -320,7 +320,7 @@ def annotateStims(annot_dict: dict, onset_path: str, trial_info_path: str,
 
     # get the stimulus modality type (only relevant for picture naming task)
     if task_name == 'picture_naming':
-        mod_cnds = loadMatCol(trial_info_path, 'trialInfo', 8)
+        mod_cnds = loadMatCol(trial_info_path, 'trialInfo', 'modality')
     else:
         mod_cnds = ['sound'] * len(onsets)
 
@@ -454,16 +454,18 @@ def runMFA(input_mfa_dir: str, output_mfa_dir: str,
         return False
     return True
     
-def loadMatCol(mat_path: str, key: str, col: int) -> np.ndarray:
+def loadMatCol(mat_path: str, key: str, col: Union[int, str]) -> np.ndarray:
     """Load a column from a variable in a .mat file.
 
     Args:
         mat_path (str): Path to mat file.
         key (str): Name of the variable in the mat file.
-        col (int): Column index to extract from the variable.
+        col (int, str): Identifier of column to extract from the mat data.
+            If an integer, this is the index of the column. If a string, this
+            is the name of the column.
 
     Returns:
-        np.ndarray: Column of data from the variable.
+        np.ndarray: Column of data from the mat file.
     """    
     data = sio.loadmat(mat_path)
     data_var = data[key][0,:]
