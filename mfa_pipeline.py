@@ -57,11 +57,11 @@ def main(cfg: DictConfig) -> None:
                    bar_format='{l_bar}{bar}{r_bar}'):
         pt_path = Path(cfg.patient_dir) / pt
         mfa_path = pt_path / 'mfa'
-        onset_path = Path(pt_path) / 'cue_events.txt'
 
         print('##### Annotating stimuli for patient %s #####' % pt)
-        stims_ran, err_msg = run_stims(annot_dict, onset_path, mfa_path,
-                                       cfg.merge_thresh, cfg.debug_mode)
+        stims_ran, err_msg = run_stims(cfg.task.name, annot_dict, pt_path,
+                                       mfa_path, cfg.merge_thresh,
+                                       cfg.debug_mode)
         if not stims_ran:
             err_pts.append(pt)
             print(err_msg % pt)
@@ -73,8 +73,9 @@ def main(cfg: DictConfig) -> None:
         for t in run_type:
             t_msg = 'Response' if t == 'resp' else 'Yes & No'
             print(f'##### Preparing patient {pt} for MFA: {t_msg} Annotation #####')
-            resp_ran, err_msg = run_resp(pt_path, mfa_path, t, cfg.task.max_dur,
-                                         cfg.task.mfa.dict, cfg.task.mfa.acoustic,
+            resp_ran, err_msg = run_resp(cfg.task.name, pt_path, mfa_path, t,
+                                         cfg.task.max_dur, cfg.task.mfa.dict,
+                                         cfg.task.mfa.acoustic,
                                          cfg.debug_mode)
             if not resp_ran:
                 err_pts.append(pt)
@@ -88,11 +89,16 @@ def main(cfg: DictConfig) -> None:
           'seconds')
 
 
-def run_stims(annot_dict, onset_path, mfa_path, merge_thresh, debug):
+def run_stims(task_name, annot_dict, pt_path, mfa_path, merge_thresh, debug):
+    # relevant files in patient directory
+    onset_path = pt_path / 'cue_events.txt'
+    trial_info_path = pt_path / 'trialInfo.mat'
+
     if not debug:
         try:
             # annotate stimuli for the current patient
-            mfa_utils.annotateStims(annot_dict, onset_path,
+            mfa_utils.annotateStims(annot_dict, onset_path, trial_info_path,
+                                    task_name,
                                     out_form='mfa_stim_%s.txt')
 
             # merge stimuli annotations together so that separate
@@ -106,14 +112,14 @@ def run_stims(annot_dict, onset_path, mfa_path, merge_thresh, debug):
             err_msg = f'Error annotating stimuli for patient %s: {e}'
             return False, err_msg
     else:
-        mfa_utils.annotateStims(annot_dict, onset_path,
-                                out_form='mfa_stim_%s.txt')
+        mfa_utils.annotateStims(annot_dict, onset_path, trial_info_path,
+                                task_name, out_form='mfa_stim_%s.txt')
         mfa_utils.mergeAnnots(mfa_path / 'mfa_stim_words.txt',
                               merge_thresh, merge_path=mfa_path /
                               'merged_stim_times.txt')
     return True, None
 
-def run_resp(pt_path, mfa_path, resp_type, max_dur, mfa_dict, mfa_acoustic, debug):
+def run_resp(task_name, pt_path, mfa_path, resp_type, max_dur, mfa_dict, mfa_acoustic, debug):
     annot_name = f'annotated_{resp_type}_windows.txt'
     wav_name_out = f'allblocks_{resp_type}.wav' if resp_type in ['yes', 'no'] else 'allblocks.wav'
     tg_out = f'allblocks_{resp_type}.TextGrid' if resp_type in ['yes', 'no'] else 'allblocks.TextGrid'
@@ -127,7 +133,7 @@ def run_resp(pt_path, mfa_path, resp_type, max_dur, mfa_dict, mfa_acoustic, debu
             mfa_utils.annotateResp(mfa_path / 'merged_stim_times.txt.',
                                    pt_path / 'trialInfo.mat',
                                    recording_dur, mfa_path,
-                                   max_dur, method=resp_type,
+                                   max_dur, task_name, method=resp_type,
                                    output_fname=annot_name)
             mfa_utils.txt2textGrid(mfa_path / annot_name, tg_out,
                                    tg_dir=mfa_path)
@@ -162,7 +168,7 @@ def run_resp(pt_path, mfa_path, resp_type, max_dur, mfa_dict, mfa_acoustic, debu
         mfa_utils.annotateResp(mfa_path / 'merged_stim_times.txt.',
                                pt_path / 'trialInfo.mat',
                                recording_dur, mfa_path,
-                               max_dur, method=resp_type,
+                               max_dur, task_name, method=resp_type,
                                output_fname=annot_name)
         mfa_utils.txt2textGrid(mfa_path / annot_name, tg_out,
                                tg_dir=mfa_path)

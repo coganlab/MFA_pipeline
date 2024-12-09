@@ -283,7 +283,8 @@ def mergeAnnots(annot_path: str, merge_thresh: float,
             f.write('\t'.join(stim) + '\n')
 
 
-def annotateStims(annot_dict: dict, onset_path: str, out_dir: str = None,
+def annotateStims(annot_dict: dict, onset_path: str, trial_info_path: str,
+                  task_name: str, out_dir: str = None,
                   out_form: str = "mfa_stim_%s.txt") -> None:
     """Places stim annotation templates in a patient's label file at locations
     defined by the provdied cue consets.
@@ -292,6 +293,8 @@ def annotateStims(annot_dict: dict, onset_path: str, out_dir: str = None,
         annot_dict (dict): Stim annotation templates. See format in
             loadAnnots() function above.
         onset_path (str): Path to the cue onset file for the patient.
+        trial_info_path (str): Path to the trial info file for the patient.
+        task_name (str): Name of the task being run.
         out_dir (str, optional): Directory to save label files to. If None,
             will add a directory "mfa" to the directory containing the onsets.
             Defaults to None.
@@ -315,6 +318,12 @@ def annotateStims(annot_dict: dict, onset_path: str, out_dir: str = None,
         # separate onsets into start time, end time, and stimulus
         onsets = [line.strip().split('\t') for line in onsets]
 
+    # get the stimulus modality type (only relevant for picture naming task)
+    if task_name == 'picture_naming':
+        mod_cnds = loadMatCol(trial_info_path, 'trialInfo', 'modality')
+    else:
+        mod_cnds = ['sound'] * len(onsets)
+
     # iterate through each annotation tier
     tier_names = list(annot_dict.keys())
     
@@ -325,26 +334,48 @@ def annotateStims(annot_dict: dict, onset_path: str, out_dir: str = None,
         except TypeError:
             fname = out_dir / (out_form.split('.')[0] + tier + '.txt')
         with open(fname, 'w') as f:
-            for (cue_start, _, stim) in onsets:
+            for i, (cue_start, cue_stop, stim) in enumerate(onsets):
                 # stim = stim.split('_')[1]
                 stim = stim.split('_')[1].split('.')[0]
-                try:
-                    curr_annots = annot_dict[tier][stim]
-                except KeyError:
-                    print(f'No annotations found for {stim} in tier {tier}.')
-                    continue
-                # write all tokens corresponding to the current stimulus
-                for (annot_start, annot_stop, token) in curr_annots:
-                    f.write(f'{float(cue_start) + float(annot_start)}\t'
-                            f'{float(cue_start) + float(annot_stop)}\t'
-                            f'{token}\n')
+                # use sound annotations for auditory stimuli
+                if mod_cnds[i] == 'sound':
+                    try:
+                        curr_annots = annot_dict[tier][stim]
+                    except KeyError:
+                        print(f'No annotations found for {stim} in tier {tier}.')
+                        continue
+                    # write all tokens corresponding to the current stimulus
+                    for (annot_start, annot_stop, token) in curr_annots:
+                        f.write(f'{float(cue_start) + float(annot_start)}\t'
+                                f'{float(cue_start) + float(annot_stop)}\t'
+                                f'{token}\n')
+                # use cue annotations otherwise
+                else:
+                    f.write(f'{cue_start}\t{cue_stop}\t{stim}\n')
                     
 
 def annotateResp(time_path: str, trial_info_path: str, recording_length: float,
-                 output_dir: str, max_dur: float, method: str = 'resp',
-                 time_fname: str = 'merged_stim_times.txt',
-                 trials_fname: str = 'trialInfo.mat', output_fname: str = 
-                 'annotated_resp_windows.txt') -> None:
+                 output_dir: str, max_dur: float, task_name: str,
+                 method: str = 'resp',
+                 output_fname: str = 'annotated_resp_windows.txt') -> None:
+    """Create response windows for a patient's recording based on the provided
+    stimulus timing information and trial info.
+
+    Args:
+        time_path (str): Path to the stimulus timing file.
+        trial_info_path (str): Path to the trial info file.
+        recording_length (float): Length of the recording in seconds.
+        output_dir (str): Directory to save the response windows to.
+        max_dur (float): Maximum duration of a response window in seconds.
+        task_name (str): Name of the task being run.
+        method (str, optional): Method to use for response windows. 'resp' will
+            create response windows based on the stimulus content. 'yes' or
+            'no' will create response windows assuming the patient is only
+            responding with 'yes' or 'no' (for yes/no tasks). Defaults to
+            'resp'.
+        output_fname (str, optional): Name of the output file containing the
+            response windows. Defaults to 'annotated_resp_windows.txt'.
+    """
     # load stimulus timing information and trial info information
     # time_path = base_dir / time_fname
     # trial_info_path = base_dir / trials_fname
@@ -357,14 +388,19 @@ def annotateResp(time_path: str, trial_info_path: str, recording_length: float,
     cue_cnds = loadMatCol(trial_info_path, 'trialInfo', 0)
 
     # extract go conditions from trial info
-    go_cnds = loadMatCol(trial_info_path, 'trialInfo', 2)
+    if task_name == 'picture_naming':
+        # go cnds not defined in trial info for picture naming task, for
+        # compatibility with other tasks
+        go_cnds = ['Speak'] * len(cue_cnds)
+    else:
+        go_cnds = loadMatCol(trial_info_path, 'trialInfo', 2)
 
     out_path = output_dir / output_fname
     with open(out_path, 'w') as f:
         for i in range(len(stim_times)):
             # check that response is expected by task conditions
             if method == 'resp':
-                if go_cnds[i] != 'Speak' or cue_cnds[i] not in ['Repeat', 'Listen']:
+                if go_cnds[i] != 'Speak' or cue_cnds[i] not in ['Repeat', 'Listen', 'ListenSpeak']:
                     continue
                 _, stim_e1, stim = stim_times[i]
             elif method in ['yes', 'no']:
@@ -372,10 +408,6 @@ def annotateResp(time_path: str, trial_info_path: str, recording_length: float,
                     continue
                 _, stim_e1, _ = stim_times[i]
                 stim = method
-
-            # if cue_cnds[i] == 'Yes/No':
-            #     # replace text with yes or no instead of stimulus content
-            #     stim = 'yes no'
 
             if i == len(stim_times) - 1:
                 # last response window is from the end of the last stimulus to
@@ -422,16 +454,18 @@ def runMFA(input_mfa_dir: str, output_mfa_dir: str,
         return False
     return True
     
-def loadMatCol(mat_path: str, key: str, col: int) -> np.ndarray:
+def loadMatCol(mat_path: str, key: str, col: Union[int, str]) -> np.ndarray:
     """Load a column from a variable in a .mat file.
 
     Args:
         mat_path (str): Path to mat file.
         key (str): Name of the variable in the mat file.
-        col (int): Column index to extract from the variable.
+        col (int, str): Identifier of column to extract from the mat data.
+            If an integer, this is the index of the column. If a string, this
+            is the name of the column.
 
     Returns:
-        np.ndarray: Column of data from the variable.
+        np.ndarray: Column of data from the mat file.
     """    
     data = sio.loadmat(mat_path)
     data_var = data[key][0,:]
