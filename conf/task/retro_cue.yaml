@@ -1,0 +1,11 @@
+name: retro_cue
+
+run_stim: False
+
+# maximum duration of window to provide to mfa in seconds (reduces duration of end of block response windows)
+max_dur: 7.0 
+
+##### MFA settings #####
+mfa:
+  dict: 'english_us_rc'
+  acoustic: 'english_us_arpa'
