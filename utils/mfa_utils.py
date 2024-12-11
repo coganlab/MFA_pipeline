@@ -9,6 +9,25 @@ import numpy as np
 import scipy.io as sio
 
 
+def makeMFADirs(base_path: str):
+    """Create directories for Montreal Forced Aligner (MFA).
+    
+    Creates an 'mfa' directory in the specified base directory, with
+    'input_mfa' and 'output_mfa' subdirectories.
+
+    Args:
+        base_path (str): Path to the directory where mfa directories will be
+        created.
+    """    
+    base_path = Path(base_path)
+    mfa_dir = base_path / 'mfa'
+    input_mfa_dir = mfa_dir / 'input_mfa'
+    output_mfa_dir = mfa_dir / 'output_mfa'
+    os.makedirs(mfa_dir, exist_ok=True)
+    os.makedirs(input_mfa_dir, exist_ok=True)
+    os.makedirs(output_mfa_dir, exist_ok=True)
+
+
 def calculateAudDur(wav_path: str) -> float:
     """Calculate the duration of an audio file in seconds.
 
@@ -58,7 +77,11 @@ def txt2textGrid(txt_path: str, tg_name: str, tg_dir: Optional[str] = None,
     entries = []
     with open(txt_path, 'r') as f:
         for line in f:
-            start, end, label = line.strip().split('\t')
+            line_split = line.strip().split('\t')
+            # skip lines with no labels
+            if len(line_split) == 2:
+                continue
+            start, end, label = line_split
             entries.append((float(start), float(end), label))
 
     # Create a TextGrid object and add an interval tier
@@ -174,9 +197,9 @@ def prepareForMFA(base_dir: str, wav_path: Optional[str] = None,
 
     # MFA input and output folders to run from command line
     input_mfa_dir = base_path / input_dir_name
-    output_mfa_dir = base_path / output_dir_name
-    os.makedirs(input_mfa_dir, exist_ok=True)
-    os.makedirs(output_mfa_dir, exist_ok=True)
+    # output_mfa_dir = base_path / output_dir_name
+    # os.makedirs(input_mfa_dir, exist_ok=True)
+    # os.makedirs(output_mfa_dir, exist_ok=True)
 
     # move wav (audio) and TextGrid (transcript) to input directory
     wav_name = wav_path.name if wav_name_out is None else wav_name_out
@@ -308,9 +331,9 @@ def annotateStims(annot_dict: dict, onset_path: str, trial_info_path: str,
     if out_dir is None:
         out_dir = onset_path.parent / 'mfa'
 
-        # add mfa directory if it doesn't exist
-        if not out_dir.exists():
-            out_dir.mkdir()
+        # # add mfa directory if it doesn't exist
+        # if not out_dir.exists():
+        #     out_dir.mkdir()
 
     # get all of the cue onsets
     with open(onset_path, 'r') as f:
@@ -415,6 +438,51 @@ def annotateResp(time_path: str, trial_info_path: str, recording_length: float,
                 stim_s2 = recording_length  # in seconds
             else:
                 stim_s2, _, _ = stim_times[i + 1]
+
+            # write the response window
+            stim_e1 = float(stim_e1)
+            stim_s2 = float(stim_s2)
+            if stim_s2 - stim_e1 > max_dur:
+                stim_s2 = stim_e1 + max_dur
+            f.write(f'{stim_e1}\t{stim_s2}\t{stim}\n')
+
+def annotateRetrocue(time_path: str, recording_length: float,
+                     output_dir: str, max_dur: float, 
+                     output_fname: str = 'annotated_resp_windows.txt') -> None:
+    """Create retrocue task response windows for a patient's recording based
+    on the provided stimulus timing information.
+
+    Args:
+        time_path (str): Path to the stimulus timing file.
+        recording_length (float): Length of the recording in seconds.
+        output_dir (str): Directory to save the response windows to.
+        max_dur (float): Maximum duration of a response window in seconds.
+        output_fname (str, optional): Name of the output file containing the
+            response windows. Defaults to 'annotated_resp_windows.txt'.
+    """
+    # load stimulus timing information and trial info information
+    # time_path = base_dir / time_fname
+    # trial_info_path = base_dir / trials_fname
+
+    # covnert stim times to list of format [start, end, stim]
+    stim_times = open(time_path, 'r').readlines()
+    stim_times = [line.strip().split('\t') for line in stim_times]
+
+    out_path = output_dir / output_fname
+    with open(out_path, 'w') as f:
+        for i in range(len(stim_times)):
+            # ignore lines with no label
+            if len(stim_times[i]) < 3:
+                continue
+
+            _, stim_e1, stim = stim_times[i]
+
+            if i == len(stim_times) - 1:
+                # last response window is from the end of the last stimulus to
+                # the end of the recording
+                stim_s2 = recording_length  # in seconds
+            else:
+                stim_s2 = stim_times[i + 1][0]
 
             # write the response window
             stim_e1 = float(stim_e1)
