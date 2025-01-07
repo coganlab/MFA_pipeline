@@ -43,6 +43,7 @@ def calculateAudDur(wav_path: str) -> float:
     time = (np.array(a[1],dtype=float)).shape[0] / fs
     return time
 
+
 def txt2textGrid(txt_path: str, tg_name: str, tg_dir: Optional[str] = None,
                  tier_name: str = 'words', return_tg: bool = False) \
         -> Optional[TextGrid]:
@@ -407,21 +408,29 @@ def annotateResp(time_path: str, trial_info_path: str, recording_length: float,
     stim_times = open(time_path, 'r').readlines()
     stim_times = [line.strip().split('\t') for line in stim_times]
 
-    # extract cue type condtions from trial info
-    cue_cnds = loadMatCol(trial_info_path, 'trialInfo', 0)
+    cue_cnds = loadMatCol(trial_info_path, 'trialInfo', 'cue')
+    if not cue_cnds: # if no cue column in trial info, assume all are Listen
+        cue_cnds = ['Listen'] * len(stim_times)
 
-    # extract go conditions from trial info
-    if task_name == 'picture_naming':
-        # go cnds not defined in trial info for picture naming task, for
-        # compatibility with other tasks
-        go_cnds = ['Speak'] * len(cue_cnds)
-    # intraop task trial info doesn't contain this info, but all are repeat
-    # - defining these for compatibility
-    elif task_name == 'lexical_repeat_intraop':
-        go_cnds = ['Speak'] * len(cue_cnds)
-        cue_cnds = ['Listen'] * len(cue_cnds)
-    else:
-        go_cnds = loadMatCol(trial_info_path, 'trialInfo', 2)
+    go_cnds = loadMatCol(trial_info_path, 'trialInfo', 'go')
+    if not go_cnds: # if no go column in trial info, assume all are Speak
+        go_cnds = ['Speak'] * len(stim_times)
+
+    # # extract cue type condtions from trial info
+    # cue_cnds = loadMatCol(trial_info_path, 'trialInfo', 0)
+
+    # # extract go conditions from trial info
+    # if task_name == 'picture_naming':
+    #     # go cnds not defined in trial info for picture naming task, for
+    #     # compatibility with other tasks
+    #     go_cnds = ['Speak'] * len(cue_cnds)
+    # # intraop task trial info doesn't contain this info, but all are repeat
+    # # - defining these for compatibility
+    # elif task_name == 'lexical_repeat_intraop':
+    #     go_cnds = ['Speak'] * len(cue_cnds)
+    #     cue_cnds = ['Listen'] * len(cue_cnds)
+    # else:
+    #     go_cnds = loadMatCol(trial_info_path, 'trialInfo', 2)
 
     out_path = output_dir / output_fname
     with open(out_path, 'w') as f:
@@ -450,6 +459,7 @@ def annotateResp(time_path: str, trial_info_path: str, recording_length: float,
             if stim_s2 - stim_e1 > max_dur:
                 stim_s2 = stim_e1 + max_dur
             f.write(f'{stim_e1}\t{stim_s2}\t{stim}\n')
+
 
 def annotateRetrocue(time_path: str, recording_length: float,
                      output_dir: str, max_dur: float, 
@@ -495,7 +505,8 @@ def annotateRetrocue(time_path: str, recording_length: float,
             if stim_s2 - stim_e1 > max_dur:
                 stim_s2 = stim_e1 + max_dur
             f.write(f'{stim_e1}\t{stim_s2}\t{stim}\n')
-                    
+
+
 def runMFA(input_mfa_dir: str, output_mfa_dir: str,
            mfa_dict: str = 'english_us_arpa',
            mfa_model: str = 'english_us_arpa',
@@ -526,22 +537,26 @@ def runMFA(input_mfa_dir: str, output_mfa_dir: str,
         print(f"An error occurred while running MFA: {e}")
         return False
     return True
-    
-def loadMatCol(mat_path: str, key: str, col: Union[int, str]) -> np.ndarray:
+
+
+def loadMatCol(mat_path: str, key: str, col: str) -> np.ndarray:
     """Load a column from a variable in a .mat file.
 
     Args:
         mat_path (str): Path to mat file.
         key (str): Name of the variable in the mat file.
-        col (int, str): Identifier of column to extract from the mat data.
-            If an integer, this is the index of the column. If a string, this
-            is the name of the column.
+        col (str): Name of column to extract from the mat data.
 
     Returns:
         np.ndarray: Column of data from the mat file.
     """    
     data = sio.loadmat(mat_path)
     data_var = data[key][0,:]
+
+    # check that key exists in the mat data
+    if col not in data_var.dtype.names or col not in data_var[0].dtype.names:
+        return False
+    
     try:  # trial info mat file saved as cell
         data_col = np.array([row[0,0][col][0] if row[0,0][col].shape[0] > 0
                              else '' for row in data_var])
