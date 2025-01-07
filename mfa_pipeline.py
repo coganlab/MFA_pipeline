@@ -93,7 +93,7 @@ def main(cfg: DictConfig) -> None:
           'seconds')
 
 
-def run_stims(task_name, annot_dict, pt_path, mfa_path, merge_thresh, debug):
+def run_stims(annot_dict, pt_path, mfa_path, merge_thresh, debug):
     # relevant files in patient directory
     onset_path = pt_path / 'cue_events.txt'
     trial_info_path = pt_path / 'trialInfo.mat'
@@ -102,7 +102,6 @@ def run_stims(task_name, annot_dict, pt_path, mfa_path, merge_thresh, debug):
         try:
             # annotate stimuli for the current patient
             mfa_utils.annotateStims(annot_dict, onset_path, trial_info_path,
-                                    task_name,
                                     out_form='mfa_stim_%s.txt')
 
             # merge stimuli annotations together so that separate
@@ -117,7 +116,7 @@ def run_stims(task_name, annot_dict, pt_path, mfa_path, merge_thresh, debug):
             return False, err_msg
     else:
         mfa_utils.annotateStims(annot_dict, onset_path, trial_info_path,
-                                task_name, out_form='mfa_stim_%s.txt')
+                                out_form='mfa_stim_%s.txt')
         mfa_utils.mergeAnnots(mfa_path / 'mfa_stim_words.txt',
                               merge_thresh, merge_path=mfa_path /
                               'merged_stim_times.txt')
@@ -153,7 +152,7 @@ def run_resp(task_name, pt_path, mfa_path, resp_type, max_dur, mfa_dict,
                 mfa_utils.annotateResp(mfa_path / 'merged_stim_times.txt.',
                                     pt_path / 'trialInfo.mat',
                                     recording_dur, mfa_path,
-                                    max_dur, task_name, method=resp_type,
+                                    max_dur, method=resp_type,
                                     output_fname=annot_name)
 
             mfa_utils.txt2textGrid(mfa_path / annot_name, tg_out,
@@ -201,7 +200,7 @@ def run_resp(task_name, pt_path, mfa_path, resp_type, max_dur, mfa_dict,
             mfa_utils.annotateResp(mfa_path / 'merged_stim_times.txt.',
                                 pt_path / 'trialInfo.mat',
                                 recording_dur, mfa_path,
-                                max_dur, task_name, method=resp_type,
+                                max_dur, method=resp_type,
                                 output_fname=annot_name)
 
         mfa_utils.txt2textGrid(mfa_path / annot_name, tg_out,
