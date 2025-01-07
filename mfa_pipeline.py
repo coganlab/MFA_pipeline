@@ -26,7 +26,8 @@ def main(cfg: DictConfig) -> None:
         patients = [os.path.basename(patient) for patient in patients]
     else:
         patients = cfg.patients.split(',')
-        print(f'========== Running MFA on seletected patients: {patients} ==========')
+        print(f'========== Running MFA on seletected patients: {patients}'
+              '==========')
 
 
     print(f'##### Running MFA for task: {cfg.task.name} #####')
