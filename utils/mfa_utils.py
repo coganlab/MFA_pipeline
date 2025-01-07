@@ -311,7 +311,7 @@ def mergeAnnots(annot_path: str, merge_thresh: float,
 
 
 def annotateStims(annot_dict: dict, onset_path: str, trial_info_path: str,
-                  task_name: str, out_dir: str = None,
+                  out_dir: str = None,
                   out_form: str = "mfa_stim_%s.txt") -> None:
     """Places stim annotation templates in a patient's label file at locations
     defined by the provdied cue consets.
@@ -321,7 +321,6 @@ def annotateStims(annot_dict: dict, onset_path: str, trial_info_path: str,
             loadAnnots() function above.
         onset_path (str): Path to the cue onset file for the patient.
         trial_info_path (str): Path to the trial info file for the patient.
-        task_name (str): Name of the task being run.
         out_dir (str, optional): Directory to save label files to. If None,
             will add a directory "mfa" to the directory containing the onsets.
             Defaults to None.
@@ -335,10 +334,6 @@ def annotateStims(annot_dict: dict, onset_path: str, trial_info_path: str,
     if out_dir is None:
         out_dir = onset_path.parent / 'mfa'
 
-        # # add mfa directory if it doesn't exist
-        # if not out_dir.exists():
-        #     out_dir.mkdir()
-
     # get all of the cue onsets
     with open(onset_path, 'r') as f:
         onsets = f.readlines()
@@ -346,9 +341,8 @@ def annotateStims(annot_dict: dict, onset_path: str, trial_info_path: str,
         onsets = [line.strip().split('\t') for line in onsets]
 
     # get the stimulus modality type (only relevant for picture naming task)
-    if task_name == 'picture_naming':
-        mod_cnds = loadMatCol(trial_info_path, 'trialInfo', 'modality')
-    else:
+    mod_cnds = loadMatCol(trial_info_path, 'trialInfo', 'modality')
+    if mod_cnds is None:
         mod_cnds = ['sound'] * len(onsets)
 
     # iterate through each annotation tier
