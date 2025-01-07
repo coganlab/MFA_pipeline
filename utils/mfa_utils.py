@@ -415,6 +415,11 @@ def annotateResp(time_path: str, trial_info_path: str, recording_length: float,
         # go cnds not defined in trial info for picture naming task, for
         # compatibility with other tasks
         go_cnds = ['Speak'] * len(cue_cnds)
+    # intraop task trial info doesn't contain this info, but all are repeat
+    # - defining these for compatibility
+    elif task_name == 'lexical_repeat_intraop':
+        go_cnds = ['Speak'] * len(cue_cnds)
+        cue_cnds = ['Listen'] * len(cue_cnds)
     else:
         go_cnds = loadMatCol(trial_info_path, 'trialInfo', 2)
 
