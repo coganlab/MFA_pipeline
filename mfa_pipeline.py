@@ -16,11 +16,6 @@ def main(cfg: DictConfig) -> None:
         raise RuntimeError(f'Missing mandatory key(s):\n{missing_keys}\n '
                            'Please specify them in the command line or config '
                            'file.')
-
-    # looks like hydra already handles this by searching conf/task
-    # if cfg.task.name not in cfg.impl_tasks:
-    #     raise NotImplementedError(f'Task {cfg.task.name} not implemented. '
-    #                               f'Please choose from: {cfg.impl_tasks}')
     
     if cfg.patients == 'all':
         print('========== Running MFA on all patients in directory ==========')
@@ -40,11 +35,7 @@ def main(cfg: DictConfig) -> None:
         print('##### RUNNING IN DEBUG MODE #####')
 
     HOME = os.path.expanduser("~")
-    run_stim = cfg.task.get('run_stim', True)
-    if run_stim:
-        # Load stimulus annotations for the task
-        annot_dir = Path(os.path.join(HOME, cfg.task.stim_dir))
-        annot_dict = mfa_utils.loadAnnotsToDict(annot_dir)
+    run_stim = cfg.task.get('run_stim', True)      
 
     run_type = ['resp']
     if cfg.task.get('mark_yes_no', False):
@@ -61,7 +52,11 @@ def main(cfg: DictConfig) -> None:
 
         if run_stim:
             print('##### Annotating stimuli for patient %s #####' % pt)
-            stims_ran, err_msg = run_stims(cfg.task.name, annot_dict, pt_path,
+            # Load stimulus annotations for the task
+            annot_dir = Path(os.path.join(HOME, cfg.task.stim_dir))
+            annot_dict = mfa_utils.loadAnnotsToDict(annot_dir)
+
+            stims_ran, err_msg = run_stims(annot_dict, pt_path,
                                            mfa_path, cfg.merge_thresh,
                                            cfg.debug_mode)
             if not stims_ran:
