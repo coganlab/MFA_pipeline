@@ -47,10 +47,9 @@ def main(cfg: DictConfig) -> None:
         annot_dict = mfa_utils.loadAnnotsToDict(annot_dir)
 
     run_type = ['resp']
-    if cfg.task.name == 'lexical_repeat':
-        if cfg.task.mark_yes_no:
-            run_type.append('yes')
-            run_type.append('no')
+    if cfg.task.get('mark_yes_no', False):
+        run_type.append('yes')
+        run_type.append('no')
 
     start = time.time()
     err_pts = []
@@ -58,7 +57,7 @@ def main(cfg: DictConfig) -> None:
                    bar_format='{l_bar}{bar}{r_bar}'):
         pt_path = Path(cfg.patient_dir) / pt
         mfa_path = pt_path / 'mfa'
-        mfa_utils.makeMFADirs(pt_path)
+        mfa_utils.makeMFADirs(pt_path, run_type)
 
         if run_stim:
             print('##### Annotating stimuli for patient %s #####' % pt)
