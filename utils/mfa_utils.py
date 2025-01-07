@@ -363,8 +363,8 @@ def annotateStims(annot_dict: dict, onset_path: str, trial_info_path: str,
                     try:
                         curr_annots = annot_dict[tier][stim]
                     except KeyError:
-                        print(f'No annotations found for {stim} in tier
-                              {tier}.')
+                        print(f'No annotations found for {stim} in tier '
+                              f'{tier}.')
                         continue
                     # write all tokens corresponding to the current stimulus
                     for (annot_start, annot_stop, token) in curr_annots:
