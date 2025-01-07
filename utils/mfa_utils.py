@@ -9,7 +9,7 @@ import numpy as np
 import scipy.io as sio
 
 
-def makeMFADirs(base_path: str):
+def makeMFADirs(base_path: str, runs: list[str]) -> None:
     """Create directories for Montreal Forced Aligner (MFA).
     
     Creates an 'mfa' directory in the specified base directory, with
@@ -21,11 +21,14 @@ def makeMFADirs(base_path: str):
     """    
     base_path = Path(base_path)
     mfa_dir = base_path / 'mfa'
-    input_mfa_dir = mfa_dir / 'input_mfa'
-    output_mfa_dir = mfa_dir / 'output_mfa'
     os.makedirs(mfa_dir, exist_ok=True)
-    os.makedirs(input_mfa_dir, exist_ok=True)
-    os.makedirs(output_mfa_dir, exist_ok=True)
+
+    for run in runs:
+        run_str = f'{"_" + run if run != "resp" else ""}'
+        input_mfa_dir = mfa_dir / ('input_mfa' + run_str)
+        output_mfa_dir = mfa_dir / ('output_mfa' + run_str)
+        os.makedirs(input_mfa_dir, exist_ok=True)
+        os.makedirs(output_mfa_dir, exist_ok=True)
 
 
 def calculateAudDur(wav_path: str) -> float:
@@ -409,11 +412,11 @@ def annotateResp(time_path: str, trial_info_path: str, recording_length: float,
     stim_times = [line.strip().split('\t') for line in stim_times]
 
     cue_cnds = loadMatCol(trial_info_path, 'trialInfo', 'cue')
-    if not cue_cnds: # if no cue column in trial info, assume all are Listen
+    if cue_cnds is None: # if no cue column in trial info, assume all are Listen
         cue_cnds = ['Listen'] * len(stim_times)
 
     go_cnds = loadMatCol(trial_info_path, 'trialInfo', 'go')
-    if not go_cnds: # if no go column in trial info, assume all are Speak
+    if go_cnds is None: # if no go column in trial info, assume all are Speak
         go_cnds = ['Speak'] * len(stim_times)
 
     # # extract cue type condtions from trial info
@@ -554,8 +557,10 @@ def loadMatCol(mat_path: str, key: str, col: str) -> np.ndarray:
     data_var = data[key][0,:]
 
     # check that key exists in the mat data
-    if col not in data_var.dtype.names or col not in data_var[0].dtype.names:
-        return False
+    col_names = (data_var.dtype.names if data_var.dtype.names is not None else
+                 data_var[0].dtype.names)
+    if col not in col_names:
+        return None
     
     try:  # trial info mat file saved as cell
         data_col = np.array([row[0,0][col][0] if row[0,0][col].shape[0] > 0
