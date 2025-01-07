@@ -1,4 +1,4 @@
-name: lexical_repeat
+name: lexical_repeat_no_delay
 
 stim_dir: 'Box\CoganLab\ECoG_Task_Data\Stim\Lexical\mfa\stim_annotations'
 
