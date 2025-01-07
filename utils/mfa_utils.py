@@ -363,7 +363,8 @@ def annotateStims(annot_dict: dict, onset_path: str, trial_info_path: str,
                     try:
                         curr_annots = annot_dict[tier][stim]
                     except KeyError:
-                        print(f'No annotations found for {stim} in tier {tier}.')
+                        print(f'No annotations found for {stim} in tier
+                              {tier}.')
                         continue
                     # write all tokens corresponding to the current stimulus
                     for (annot_start, annot_stop, token) in curr_annots:
@@ -376,8 +377,7 @@ def annotateStims(annot_dict: dict, onset_path: str, trial_info_path: str,
                     
 
 def annotateResp(time_path: str, trial_info_path: str, recording_length: float,
-                 output_dir: str, max_dur: float, task_name: str,
-                 method: str = 'resp',
+                 output_dir: str, max_dur: float, method: str = 'resp',
                  output_fname: str = 'annotated_resp_windows.txt') -> None:
     """Create response windows for a patient's recording based on the provided
     stimulus timing information and trial info.
@@ -397,9 +397,6 @@ def annotateResp(time_path: str, trial_info_path: str, recording_length: float,
         output_fname (str, optional): Name of the output file containing the
             response windows. Defaults to 'annotated_resp_windows.txt'.
     """
-    # load stimulus timing information and trial info information
-    # time_path = base_dir / time_fname
-    # trial_info_path = base_dir / trials_fname
 
     # covnert stim times to list of format [start, end, stim]
     stim_times = open(time_path, 'r').readlines()
@@ -413,28 +410,14 @@ def annotateResp(time_path: str, trial_info_path: str, recording_length: float,
     if go_cnds is None: # if no go column in trial info, assume all are Speak
         go_cnds = ['Speak'] * len(stim_times)
 
-    # # extract cue type condtions from trial info
-    # cue_cnds = loadMatCol(trial_info_path, 'trialInfo', 0)
-
-    # # extract go conditions from trial info
-    # if task_name == 'picture_naming':
-    #     # go cnds not defined in trial info for picture naming task, for
-    #     # compatibility with other tasks
-    #     go_cnds = ['Speak'] * len(cue_cnds)
-    # # intraop task trial info doesn't contain this info, but all are repeat
-    # # - defining these for compatibility
-    # elif task_name == 'lexical_repeat_intraop':
-    #     go_cnds = ['Speak'] * len(cue_cnds)
-    #     cue_cnds = ['Listen'] * len(cue_cnds)
-    # else:
-    #     go_cnds = loadMatCol(trial_info_path, 'trialInfo', 2)
-
     out_path = output_dir / output_fname
     with open(out_path, 'w') as f:
         for i in range(len(stim_times)):
             # check that response is expected by task conditions
             if method == 'resp':
-                if go_cnds[i] != 'Speak' or cue_cnds[i] not in ['Repeat', 'Listen', 'ListenSpeak']:
+                if go_cnds[i] != 'Speak' or cue_cnds[i] not in ['Repeat',
+                                                                'Listen',
+                                                                'ListenSpeak']:
                     continue
                 _, stim_e1, stim = stim_times[i]
             elif method in ['yes', 'no']:
@@ -523,8 +506,6 @@ def runMFA(input_mfa_dir: str, output_mfa_dir: str,
             a single speaker. Defaults to True.
     """    
     try:
-        # os.system(f'mfa align --clean {input_mfa_dir} {mfa_dict} {mfa_model} '
-        #         f'{output_mfa_dir}')
         mfa_cmd = ['mfa', 'align', '--clean', input_mfa_dir, mfa_dict,
                    mfa_model, output_mfa_dir]
         if single_speaker:
