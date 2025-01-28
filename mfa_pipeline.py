@@ -135,7 +135,9 @@ def run_resp(task_name, pt_path, mfa_path, resp_type, max_dur, mfa_dict,
     label_name = f'mfa_{resp_type}'
     if not debug:
         try:
-            # create text grid annotation for responses            
+            # create text grid annotation for responses
+            recording_dur = mfa_utils.calculateAudDur(
+                                pt_path / 'allblocks.wav')            
             if task_name == 'retro_cue':
                 # create text grid annotation for retro cue task
                 mfa_utils.annotateRetrocue(pt_path / 'cue_events_mfa.txt',
@@ -143,8 +145,6 @@ def run_resp(task_name, pt_path, mfa_path, resp_type, max_dur, mfa_dict,
                                            mfa_path, max_dur,
                                            output_fname=annot_name)
             else:
-                recording_dur = mfa_utils.calculateAudDur(
-                                    pt_path / 'allblocks.wav')
                 mfa_utils.annotateResp(mfa_path / 'merged_stim_times.txt.',
                                     pt_path / 'trialInfo.mat',
                                     recording_dur, mfa_path,
@@ -182,7 +182,7 @@ def run_resp(task_name, pt_path, mfa_path, resp_type, max_dur, mfa_dict,
     else:
         # create text grid annotation for responses
         recording_dur = mfa_utils.calculateAudDur(
-                                pt_path / 'allblocks.wav')
+                            pt_path / 'allblocks.wav')
         # create text grid annotation for responses            
         if task_name == 'retro_cue':
             # create text grid annotation for retro cue task
@@ -191,8 +191,6 @@ def run_resp(task_name, pt_path, mfa_path, resp_type, max_dur, mfa_dict,
                                         mfa_path, max_dur,
                                         output_fname=annot_name)
         else:
-            recording_dur = mfa_utils.calculateAudDur(
-                                pt_path / 'allblocks.wav')
             mfa_utils.annotateResp(mfa_path / 'merged_stim_times.txt.',
                                 pt_path / 'trialInfo.mat',
                                 recording_dur, mfa_path,
