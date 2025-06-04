@@ -9,7 +9,7 @@ import numpy as np
 import scipy.io as sio
 
 
-def makeMFADirs(base_path: str):
+def makeMFADirs(base_path: str, runs: list[str]) -> None:
     """Create directories for Montreal Forced Aligner (MFA).
     
     Creates an 'mfa' directory in the specified base directory, with
@@ -21,11 +21,14 @@ def makeMFADirs(base_path: str):
     """    
     base_path = Path(base_path)
     mfa_dir = base_path / 'mfa'
-    input_mfa_dir = mfa_dir / 'input_mfa'
-    output_mfa_dir = mfa_dir / 'output_mfa'
     os.makedirs(mfa_dir, exist_ok=True)
-    os.makedirs(input_mfa_dir, exist_ok=True)
-    os.makedirs(output_mfa_dir, exist_ok=True)
+
+    for run in runs:
+        run_str = f'{"_" + run if run != "resp" else ""}'
+        input_mfa_dir = mfa_dir / ('input_mfa' + run_str)
+        output_mfa_dir = mfa_dir / ('output_mfa' + run_str)
+        os.makedirs(input_mfa_dir, exist_ok=True)
+        os.makedirs(output_mfa_dir, exist_ok=True)
 
 
 def calculateAudDur(wav_path: str) -> float:
@@ -42,6 +45,7 @@ def calculateAudDur(wav_path: str) -> float:
     fs = a[0]
     time = (np.array(a[1],dtype=float)).shape[0] / fs
     return time
+
 
 def txt2textGrid(txt_path: str, tg_name: str, tg_dir: Optional[str] = None,
                  tier_name: str = 'words', return_tg: bool = False) \
@@ -307,7 +311,7 @@ def mergeAnnots(annot_path: str, merge_thresh: float,
 
 
 def annotateStims(annot_dict: dict, onset_path: str, trial_info_path: str,
-                  task_name: str, out_dir: str = None,
+                  out_dir: str = None,
                   out_form: str = "mfa_stim_%s.txt") -> None:
     """Places stim annotation templates in a patient's label file at locations
     defined by the provdied cue consets.
@@ -317,7 +321,6 @@ def annotateStims(annot_dict: dict, onset_path: str, trial_info_path: str,
             loadAnnots() function above.
         onset_path (str): Path to the cue onset file for the patient.
         trial_info_path (str): Path to the trial info file for the patient.
-        task_name (str): Name of the task being run.
         out_dir (str, optional): Directory to save label files to. If None,
             will add a directory "mfa" to the directory containing the onsets.
             Defaults to None.
@@ -331,10 +334,6 @@ def annotateStims(annot_dict: dict, onset_path: str, trial_info_path: str,
     if out_dir is None:
         out_dir = onset_path.parent / 'mfa'
 
-        # # add mfa directory if it doesn't exist
-        # if not out_dir.exists():
-        #     out_dir.mkdir()
-
     # get all of the cue onsets
     with open(onset_path, 'r') as f:
         onsets = f.readlines()
@@ -342,9 +341,8 @@ def annotateStims(annot_dict: dict, onset_path: str, trial_info_path: str,
         onsets = [line.strip().split('\t') for line in onsets]
 
     # get the stimulus modality type (only relevant for picture naming task)
-    if task_name == 'picture_naming':
-        mod_cnds = loadMatCol(trial_info_path, 'trialInfo', 'modality')
-    else:
+    mod_cnds = loadMatCol(trial_info_path, 'trialInfo', 'modality')
+    if mod_cnds is None:
         mod_cnds = ['sound'] * len(onsets)
 
     # iterate through each annotation tier
@@ -365,7 +363,8 @@ def annotateStims(annot_dict: dict, onset_path: str, trial_info_path: str,
                     try:
                         curr_annots = annot_dict[tier][stim]
                     except KeyError:
-                        print(f'No annotations found for {stim} in tier {tier}.')
+                        print(f'No annotations found for {stim} in tier '
+                              f'{tier}.')
                         continue
                     # write all tokens corresponding to the current stimulus
                     for (annot_start, annot_stop, token) in curr_annots:
@@ -378,8 +377,7 @@ def annotateStims(annot_dict: dict, onset_path: str, trial_info_path: str,
                     
 
 def annotateResp(time_path: str, trial_info_path: str, recording_length: float,
-                 output_dir: str, max_dur: float, task_name: str,
-                 method: str = 'resp',
+                 output_dir: str, max_dur: float, method: str = 'resp',
                  output_fname: str = 'annotated_resp_windows.txt') -> None:
     """Create response windows for a patient's recording based on the provided
     stimulus timing information and trial info.
@@ -399,36 +397,27 @@ def annotateResp(time_path: str, trial_info_path: str, recording_length: float,
         output_fname (str, optional): Name of the output file containing the
             response windows. Defaults to 'annotated_resp_windows.txt'.
     """
-    # load stimulus timing information and trial info information
-    # time_path = base_dir / time_fname
-    # trial_info_path = base_dir / trials_fname
 
     # covnert stim times to list of format [start, end, stim]
     stim_times = open(time_path, 'r').readlines()
     stim_times = [line.strip().split('\t') for line in stim_times]
 
-    # extract cue type condtions from trial info
-    cue_cnds = loadMatCol(trial_info_path, 'trialInfo', 0)
+    cue_cnds = loadMatCol(trial_info_path, 'trialInfo', 'cue')
+    if cue_cnds is None: # if no cue column in trial info, assume all are Listen
+        cue_cnds = ['Listen'] * len(stim_times)
 
-    # extract go conditions from trial info
-    if task_name == 'picture_naming':
-        # go cnds not defined in trial info for picture naming task, for
-        # compatibility with other tasks
-        go_cnds = ['Speak'] * len(cue_cnds)
-    # intraop task trial info doesn't contain this info, but all are repeat
-    # - defining these for compatibility
-    elif task_name == 'lexical_repeat_intraop':
-        go_cnds = ['Speak'] * len(cue_cnds)
-        cue_cnds = ['Listen'] * len(cue_cnds)
-    else:
-        go_cnds = loadMatCol(trial_info_path, 'trialInfo', 2)
+    go_cnds = loadMatCol(trial_info_path, 'trialInfo', 'go')
+    if go_cnds is None: # if no go column in trial info, assume all are Speak
+        go_cnds = ['Speak'] * len(stim_times)
 
     out_path = output_dir / output_fname
     with open(out_path, 'w') as f:
         for i in range(len(stim_times)):
             # check that response is expected by task conditions
             if method == 'resp':
-                if go_cnds[i] != 'Speak' or cue_cnds[i] not in ['Repeat', 'Listen', 'ListenSpeak']:
+                if go_cnds[i] != 'Speak' or cue_cnds[i] not in ['Repeat',
+                                                                'Listen',
+                                                                'ListenSpeak']:
                     continue
                 _, stim_e1, stim = stim_times[i]
             elif method in ['yes', 'no']:
@@ -450,6 +439,7 @@ def annotateResp(time_path: str, trial_info_path: str, recording_length: float,
             if stim_s2 - stim_e1 > max_dur:
                 stim_s2 = stim_e1 + max_dur
             f.write(f'{stim_e1}\t{stim_s2}\t{stim}\n')
+
 
 def annotateRetrocue(time_path: str, recording_length: float,
                      output_dir: str, max_dur: float, 
@@ -495,7 +485,8 @@ def annotateRetrocue(time_path: str, recording_length: float,
             if stim_s2 - stim_e1 > max_dur:
                 stim_s2 = stim_e1 + max_dur
             f.write(f'{stim_e1}\t{stim_s2}\t{stim}\n')
-                    
+
+
 def runMFA(input_mfa_dir: str, output_mfa_dir: str,
            mfa_dict: str = 'english_us_arpa',
            mfa_model: str = 'english_us_arpa',
@@ -515,8 +506,6 @@ def runMFA(input_mfa_dir: str, output_mfa_dir: str,
             a single speaker. Defaults to True.
     """    
     try:
-        # os.system(f'mfa align --clean {input_mfa_dir} {mfa_dict} {mfa_model} '
-        #         f'{output_mfa_dir}')
         mfa_cmd = ['mfa', 'align', '--clean', input_mfa_dir, mfa_dict,
                    mfa_model, output_mfa_dir]
         if single_speaker:
@@ -526,22 +515,28 @@ def runMFA(input_mfa_dir: str, output_mfa_dir: str,
         print(f"An error occurred while running MFA: {e}")
         return False
     return True
-    
-def loadMatCol(mat_path: str, key: str, col: Union[int, str]) -> np.ndarray:
+
+
+def loadMatCol(mat_path: str, key: str, col: str) -> np.ndarray:
     """Load a column from a variable in a .mat file.
 
     Args:
         mat_path (str): Path to mat file.
         key (str): Name of the variable in the mat file.
-        col (int, str): Identifier of column to extract from the mat data.
-            If an integer, this is the index of the column. If a string, this
-            is the name of the column.
+        col (str): Name of column to extract from the mat data.
 
     Returns:
         np.ndarray: Column of data from the mat file.
     """    
     data = sio.loadmat(mat_path)
     data_var = data[key][0,:]
+
+    # check that key exists in the mat data
+    col_names = (data_var.dtype.names if data_var.dtype.names is not None else
+                 data_var[0].dtype.names)
+    if col not in col_names:
+        return None
+    
     try:  # trial info mat file saved as cell
         data_col = np.array([row[0,0][col][0] if row[0,0][col].shape[0] > 0
                              else '' for row in data_var])

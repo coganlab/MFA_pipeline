@@ -16,11 +16,6 @@ def main(cfg: DictConfig) -> None:
         raise RuntimeError(f'Missing mandatory key(s):\n{missing_keys}\n '
                            'Please specify them in the command line or config '
                            'file.')
-
-    # looks like hydra already handles this by searching conf/task
-    # if cfg.task.name not in cfg.impl_tasks:
-    #     raise NotImplementedError(f'Task {cfg.task.name} not implemented. '
-    #                               f'Please choose from: {cfg.impl_tasks}')
     
     if cfg.patients == 'all':
         print('========== Running MFA on all patients in directory ==========')
@@ -31,7 +26,8 @@ def main(cfg: DictConfig) -> None:
         patients = [os.path.basename(patient) for patient in patients]
     else:
         patients = cfg.patients.split(',')
-        print(f'========== Running MFA on seletected patients: {patients} ==========')
+        print(f'========== Running MFA on seletected patients: {patients}'
+              '==========')
 
 
     print(f'##### Running MFA for task: {cfg.task.name} #####')
@@ -40,17 +36,12 @@ def main(cfg: DictConfig) -> None:
         print('##### RUNNING IN DEBUG MODE #####')
 
     HOME = os.path.expanduser("~")
-    run_stim = cfg.task.get('run_stim', True)
-    if run_stim:
-        # Load stimulus annotations for the task
-        annot_dir = Path(os.path.join(HOME, cfg.task.stim_dir))
-        annot_dict = mfa_utils.loadAnnotsToDict(annot_dir)
+    run_stim = cfg.task.get('run_stim', True)      
 
     run_type = ['resp']
-    if cfg.task.name == 'lexical_repeat':
-        if cfg.task.mark_yes_no:
-            run_type.append('yes')
-            run_type.append('no')
+    if cfg.task.get('mark_yes_no', False):
+        run_type.append('yes')
+        run_type.append('no')
 
     start = time.time()
     err_pts = []
@@ -58,11 +49,15 @@ def main(cfg: DictConfig) -> None:
                    bar_format='{l_bar}{bar}{r_bar}'):
         pt_path = Path(cfg.patient_dir) / pt
         mfa_path = pt_path / 'mfa'
-        mfa_utils.makeMFADirs(pt_path)
+        mfa_utils.makeMFADirs(pt_path, run_type)
 
         if run_stim:
             print('##### Annotating stimuli for patient %s #####' % pt)
-            stims_ran, err_msg = run_stims(cfg.task.name, annot_dict, pt_path,
+            # Load stimulus annotations for the task
+            annot_dir = Path(os.path.join(HOME, cfg.task.stim_dir))
+            annot_dict = mfa_utils.loadAnnotsToDict(annot_dir)
+
+            stims_ran, err_msg = run_stims(annot_dict, pt_path,
                                            mfa_path, cfg.merge_thresh,
                                            cfg.debug_mode)
             if not stims_ran:
@@ -94,7 +89,7 @@ def main(cfg: DictConfig) -> None:
           'seconds')
 
 
-def run_stims(task_name, annot_dict, pt_path, mfa_path, merge_thresh, debug):
+def run_stims(annot_dict, pt_path, mfa_path, merge_thresh, debug):
     # relevant files in patient directory
     onset_path = pt_path / 'cue_events.txt'
     trial_info_path = pt_path / 'trialInfo.mat'
@@ -103,7 +98,6 @@ def run_stims(task_name, annot_dict, pt_path, mfa_path, merge_thresh, debug):
         try:
             # annotate stimuli for the current patient
             mfa_utils.annotateStims(annot_dict, onset_path, trial_info_path,
-                                    task_name,
                                     out_form='mfa_stim_%s.txt')
 
             # merge stimuli annotations together so that separate
@@ -118,7 +112,7 @@ def run_stims(task_name, annot_dict, pt_path, mfa_path, merge_thresh, debug):
             return False, err_msg
     else:
         mfa_utils.annotateStims(annot_dict, onset_path, trial_info_path,
-                                task_name, out_form='mfa_stim_%s.txt')
+                                out_form='mfa_stim_%s.txt')
         mfa_utils.mergeAnnots(mfa_path / 'mfa_stim_words.txt',
                               merge_thresh, merge_path=mfa_path /
                               'merged_stim_times.txt')
@@ -141,7 +135,9 @@ def run_resp(task_name, pt_path, mfa_path, resp_type, max_dur, mfa_dict,
     label_name = f'mfa_{resp_type}'
     if not debug:
         try:
-            # create text grid annotation for responses            
+            # create text grid annotation for responses
+            recording_dur = mfa_utils.calculateAudDur(
+                                pt_path / 'allblocks.wav')            
             if task_name == 'retro_cue':
                 # create text grid annotation for retro cue task
                 mfa_utils.annotateRetrocue(pt_path / 'cue_events_mfa.txt',
@@ -149,12 +145,10 @@ def run_resp(task_name, pt_path, mfa_path, resp_type, max_dur, mfa_dict,
                                            mfa_path, max_dur,
                                            output_fname=annot_name)
             else:
-                recording_dur = mfa_utils.calculateAudDur(
-                                    pt_path / 'allblocks.wav')
                 mfa_utils.annotateResp(mfa_path / 'merged_stim_times.txt.',
                                     pt_path / 'trialInfo.mat',
                                     recording_dur, mfa_path,
-                                    max_dur, task_name, method=resp_type,
+                                    max_dur, method=resp_type,
                                     output_fname=annot_name)
 
             mfa_utils.txt2textGrid(mfa_path / annot_name, tg_out,
@@ -188,7 +182,7 @@ def run_resp(task_name, pt_path, mfa_path, resp_type, max_dur, mfa_dict,
     else:
         # create text grid annotation for responses
         recording_dur = mfa_utils.calculateAudDur(
-                                pt_path / 'allblocks.wav')
+                            pt_path / 'allblocks.wav')
         # create text grid annotation for responses            
         if task_name == 'retro_cue':
             # create text grid annotation for retro cue task
@@ -197,12 +191,10 @@ def run_resp(task_name, pt_path, mfa_path, resp_type, max_dur, mfa_dict,
                                         mfa_path, max_dur,
                                         output_fname=annot_name)
         else:
-            recording_dur = mfa_utils.calculateAudDur(
-                                pt_path / 'allblocks.wav')
             mfa_utils.annotateResp(mfa_path / 'merged_stim_times.txt.',
                                 pt_path / 'trialInfo.mat',
                                 recording_dur, mfa_path,
-                                max_dur, task_name, method=resp_type,
+                                max_dur, method=resp_type,
                                 output_fname=annot_name)
 
         mfa_utils.txt2textGrid(mfa_path / annot_name, tg_out,
