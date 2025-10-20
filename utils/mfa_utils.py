@@ -7,6 +7,7 @@ from typing import Optional, Union
 from textgrid import TextGrid, IntervalTier
 import numpy as np
 import scipy.io as sio
+import noisereduce as nr
 
 
 def makeMFADirs(base_path: str, runs: list[str]) -> None:
@@ -199,11 +200,19 @@ def prepareForMFA(base_dir: str, wav_path: Optional[str] = None,
     else:
         tg_path = Path(tg_path)
 
+    # denoise audio file before moving to MFA input directory
+    fs, data = sio.wavfile.read(wav_path)
+    reduced_noise = nr.reduce_noise(y=data, sr=fs, stationary=False,
+                                    prop_decrease=0.9)
+
+    # save copy of original wav file
+    shutil.copy(wav_path, wav_path.parent / (wav_path.stem + '_original' +
+                                            wav_path.suffix))
+    # overwrite original wav file with denoised version
+    sio.wavfile.write(wav_path, fs, reduced_noise.astype(data.dtype))
+
     # MFA input and output folders to run from command line
     input_mfa_dir = base_path / input_dir_name
-    # output_mfa_dir = base_path / output_dir_name
-    # os.makedirs(input_mfa_dir, exist_ok=True)
-    # os.makedirs(output_mfa_dir, exist_ok=True)
 
     # move wav (audio) and TextGrid (transcript) to input directory
     wav_name = wav_path.name if wav_name_out is None else wav_name_out
