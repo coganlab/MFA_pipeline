@@ -411,9 +411,15 @@ def annotateResp(time_path: str, trial_info_path: str, recording_length: float,
     stim_times = open(time_path, 'r').readlines()
     stim_times = [line.strip().split('\t') for line in stim_times]
 
-    cue_cnds = loadMatCol(trial_info_path, 'trialInfo', 'cue')
-    if cue_cnds is None: # if no cue column in trial info, assume all are Listen
-        cue_cnds = ['Listen'] * len(stim_times)
+    cue_col_names = ['cue', 'condition']
+    for col_name in cue_col_names:
+        cue_cnds = loadMatCol(trial_info_path, 'trialInfo', col_name)
+        # if no cue column in trial info, temporarily assume all are Listen and
+        # try next column name
+        if cue_cnds is None:
+            cue_cnds = ['Listen'] * len(stim_times)
+        else:  # move on if correct column is found
+            break
 
     go_cnds = loadMatCol(trial_info_path, 'trialInfo', 'go')
     if go_cnds is None: # if no go column in trial info, assume all are Speak
