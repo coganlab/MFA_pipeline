@@ -163,7 +163,8 @@ def prepareForMFA(base_dir: str, wav_path: Optional[str] = None,
                   wav_name_out: Optional[str] = None,
                   tg_name_out: Optional[str] = None,
                   input_dir_name: str = 'input_mfa',
-                  output_dir_name: str = 'output_mfa') -> None:
+                  output_dir_name: str = 'output_mfa',
+                  denoise: bool = True) -> None:
     """Prepare files for Montreal Forced Aligner (MFA) by moving audio and
     transcript files to a newly created MFA input directory. An output
     directory is also created to store MFA output files.
@@ -185,6 +186,10 @@ def prepareForMFA(base_dir: str, wav_path: Optional[str] = None,
         tg_name_out (str, optional): Name for the transcript file in the MFA
             input directory. Gives the option to rename the transcript file.
             Defaults to None.
+        denoise (bool, optional): Whether to apply noise reduction to the audio
+            file before moving it to the MFA input directory. Set to False for
+            special cases (e.g. certain microphones) where denoising degrades
+            audio quality. Defaults to True.
     """    
     base_path = Path(base_dir)
     
@@ -200,16 +205,18 @@ def prepareForMFA(base_dir: str, wav_path: Optional[str] = None,
     else:
         tg_path = Path(tg_path)
 
-    # denoise audio file before moving to MFA input directory
-    fs, data = sio.wavfile.read(wav_path)
-    reduced_noise = nr.reduce_noise(y=data, sr=fs, stationary=False,
-                                    prop_decrease=0.9)
+    # denoise audio file before moving to MFA input directory (skipped when
+    # denoise is False, e.g. for microphones where denoising hurts quality)
+    if denoise:
+        fs, data = sio.wavfile.read(wav_path)
+        reduced_noise = nr.reduce_noise(y=data, sr=fs, stationary=False,
+                                        prop_decrease=0.9)
 
-    # save copy of original wav file
-    shutil.copy(wav_path, wav_path.parent / (wav_path.stem + '_original' +
-                                            wav_path.suffix))
-    # overwrite original wav file with denoised version
-    sio.wavfile.write(wav_path, fs, reduced_noise.astype(data.dtype))
+        # save copy of original wav file
+        shutil.copy(wav_path, wav_path.parent / (wav_path.stem + '_original' +
+                                                wav_path.suffix))
+        # overwrite original wav file with denoised version
+        sio.wavfile.write(wav_path, fs, reduced_noise.astype(data.dtype))
 
     # MFA input and output folders to run from command line
     input_mfa_dir = base_path / input_dir_name

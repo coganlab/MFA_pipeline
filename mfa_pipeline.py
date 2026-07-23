@@ -76,7 +76,8 @@ def main(cfg: DictConfig) -> None:
             resp_ran, err_msg = run_resp(cfg.task.name, pt_path, mfa_path, t,
                                          cfg.task.max_dur, cfg.task.mfa.dict,
                                          cfg.task.mfa.acoustic,
-                                         cfg.debug_mode, annot_fname)
+                                         cfg.debug_mode, annot_fname,
+                                         cfg.get('denoise', True))
             if not resp_ran:
                 err_pts.append(pt)
                 print(err_msg % pt)
@@ -120,7 +121,7 @@ def run_stims(annot_dict, pt_path, mfa_path, merge_thresh, debug):
 
 
 def run_resp(task_name, pt_path, mfa_path, resp_type, max_dur, mfa_dict,
-             mfa_acoustic, debug, annot_name=None):
+             mfa_acoustic, debug, annot_name=None, denoise=True):
     # default annotation file name if one is not provided
     if not annot_name:
         annot_name = f'annotated_{resp_type}_windows.txt'
@@ -158,7 +159,8 @@ def run_resp(task_name, pt_path, mfa_path, resp_type, max_dur, mfa_dict,
                                     tg_path=mfa_path / tg_out,
                                     wav_name_out=wav_name_out,
                                     input_dir_name=inp_mfa_name,
-                                    output_dir_name=out_mfa_name)
+                                    output_dir_name=out_mfa_name,
+                                    denoise=denoise)
 
         except Exception as e:
             err_msg = f'Error preparing patient %s for MFA: {e}'
@@ -203,7 +205,8 @@ def run_resp(task_name, pt_path, mfa_path, resp_type, max_dur, mfa_dict,
                                 tg_path=mfa_path / tg_out,
                                 wav_name_out=wav_name_out,
                                 input_dir_name=inp_mfa_name,
-                                output_dir_name=out_mfa_name)
+                                output_dir_name=out_mfa_name,
+                                denoise=denoise)
         _ = mfa_utils.runMFA(mfa_path / inp_mfa_name, mfa_path /
                              out_mfa_name, mfa_dict=mfa_dict,
                              mfa_model=mfa_acoustic)

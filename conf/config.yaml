@@ -12,4 +12,8 @@ merge_thresh: 0.5  # seconds
 
 only_stims: False
 
+# apply noise reduction to audio before running MFA. Set to False for special
+# cases (e.g. certain microphones) where denoising degrades audio quality.
+denoise: True
+
 debug_mode: False
