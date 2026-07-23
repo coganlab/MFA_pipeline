@@ -528,8 +528,8 @@ def runMFA(input_mfa_dir: str, output_mfa_dir: str,
             a single speaker. Defaults to True.
     """    
     try:
-        mfa_cmd = ['mfa', 'align', '--clean', input_mfa_dir, mfa_dict,
-                   mfa_model, output_mfa_dir]
+        mfa_cmd = ['mfa', 'align', '--clean', str(input_mfa_dir), mfa_dict,
+                   mfa_model, str(output_mfa_dir)]
         if single_speaker:
             mfa_cmd.insert(3, '--single_speaker')
         subprocess.run(mfa_cmd, check=True)
