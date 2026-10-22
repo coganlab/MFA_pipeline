@@ -1,0 +1,11 @@
+name: sentence_repeat_intraop
+
+stim_dir: 'Box\CoganLab\ECoG_Task_Data\Stim\IntraopSentenceRep\mfa\stim_annotations'
+
+# maximum duration of window to provide to mfa in seconds (reduces duration of end of block response windows)
+max_dur: 12.0
+
+##### MFA settings #####
+mfa:
+  dict: 'english_us_arpa'
+  acoustic: 'english_us_arpa'
