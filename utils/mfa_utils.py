@@ -265,7 +265,7 @@ def loadAnnotsToDict(annot_dir: str, tier_name: Union[str, list[str]] =
     to_load = []
     annot_dict = {}
     for tier in tier_name:
-        to_load.extend(glob.glob((annot_dir / f'*_{tier}.txt').as_posix()))
+        to_load.extend(glob.glob((annot_dir / '**' / f'*_{tier}.txt').as_posix(), recursive=True))
         annot_dict[tier] = {}  # each tier will be a subdict
 
     # read annotation files and separate by tier
